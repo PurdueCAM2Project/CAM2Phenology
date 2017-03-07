@@ -1,0 +1,1 @@
+EXIFmodder: Flickr data collector that downloads local, EXIF edited photos
