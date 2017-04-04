@@ -17,7 +17,7 @@ if __name__ == "__main__":
     filepath = "C:\Users\Achinthya\Desktop\Projects\TextureAnalysis\Images"
 
     outputFile = open("tiers.txt", 'w')
-    imageFeed(outputFile, filepath)
+    imageFeed(filepath)
     outputFile.close()
 
 #Overall plan:
