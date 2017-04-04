@@ -33,6 +33,14 @@ def insertRating(dict, location):
 	exif_bytes=piexif.dump(exif_dict)
 	piexif.insert(exif_bytes, location)
 
+def getGPS(exif_dict):
+	dict=eval(exif_dict['Exif'][piexif.ExifIFD.UserComment])
+	location=dict['gps']
+	if location is not None:
+		return location
+	else:
+		print('No GPS Data')
+
 def getImage(location):
 	im=Image.open(location)
 	return im
@@ -52,12 +60,25 @@ def parseDir(path):
 
 	return images
 
+def getGeo(dataList):
+	i=0
+	coordinates=[]
+	while i<dataList.numImages:
+		exif=dataList.getNext(1)[1]
+		dict=eval(exif['Exif'][piexif.ExifIFD.UserComment])
+		location=dict['gps']
+		if location is not None:
+			coordinates.append((location[0], location[1]))
+		i=i+1
+	return coordinates
+	
+
 class DataList(object):
 
 	def pushImages(self, num):
 		i=self.index
 		while i<num and i<self.source.total:
-			self.imageList.append(self.source.getImage(i))
+			self.imageList.append((self.source.getImage(i), self.source.getEXIF(i)))
 			i=i+1
 
 	def pushImageMeta(self, num):
@@ -66,20 +87,22 @@ class DataList(object):
 			self.imageList.append(self.source.getEXIF(i))
 			i=i+1
 
-	def __init__(self, source, bufferNum):
+	def __init__(self, source, numImages):
 		self.source=source
 		self.type=type
 		self.imageList=[]
 		self.index=0
+		self.numImages=numImages
+	def addImages(self, numAdded):
+		self.index=self.numImages
+		self.numImages=self.numImages+numAdded
 	def getNext(self,i):
 		self.index=self.index+i
-		self.index=self.index%len(self.imageList)
-		return self.imageList[self.index]
+		self.index=self.index%self.numImages
+		return (self.source.getImage(self.index), self.source.getEXIF(self.index))
 	
 	def isEmpty(self):
 		return len(self.imageList)==0;
-		
-
 	def popImage(self):
 		
 		if len(self.imageList)>0:
@@ -87,11 +110,3 @@ class DataList(object):
 			self.index=self.index+1
 		else:
 			print ('No cached images')
-
-def makeDataList(source, bufferNum, type):
-	dataList=DataList(source, bufferNum)
-	if type=='image':
-		dataList.pushImages(bufferNum)
-	else:
-		dataList.pushImageMeta(bufferNum)
-	return dataList

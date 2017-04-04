@@ -31,8 +31,8 @@ def sortDict(list, key):
 def plotGeo(source):
 	import gmplot
 	gmap=gmplot.GoogleMapPlotter(35.6583, -83.5200, 13.8)
+
 	print('TOTAL: '+str(source.total))
-	import matplotlib.pyplot as plt
 	i=0
 	lats=[]
 	longs=[]
@@ -41,14 +41,14 @@ def plotGeo(source):
 		dict=eval(exif['Exif'][piexif.ExifIFD.UserComment])
 		location=dict['gps']
 		if location is not None:
-			#plt.plot([location[1]], [location[0]], 'ko')
+		#	plot.plot([location[1]], [location[0]], 'ko')
 			lats.append(location[0])
 			longs.append(location[1])
 			print(i)
 		i=i+1
-	gmap.heatmap(lats, longs, radius=50, threshold=40000, dissipating=True)
-	#gmap.scatter(lats, longs, 'ko', size=20, marker=False)
-	gmap.draw('/mnt/c/Users/emars/Desktop/ccLargeGeoHeatPlot.html')
+#	gmap.heatmap(lats, longs, radius=50, threshold=40000, dissipating=True)
+	gmap.scatter(lats, longs, 'ro', size=20, marker=False)
+	gmap.draw('/mnt/c/Users/emars/Desktop/ccLargeGeoPlot2.html')
 	#plt.show()	
 
 def geoTrend(pack):
