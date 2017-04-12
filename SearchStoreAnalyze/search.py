@@ -1,4 +1,4 @@
-#this class handles all image searching.  Retrieval is handled by searchPackage class (in phenImage)
+#this class handles all image searching.  Retrieval is handled by searchPackage class (in storage)
 #All searches done on flickr using flickr API.  Plan to rename flickrSearch and have a master search class to handle searches done from different API's
 #Suggest looking at flickr.photos.search on flickr's api explorer
 #Somewhat slow depending on internet
@@ -6,8 +6,8 @@
 import json
 import urllib.request
 import htmlParser
-import phenImage
-from phenImage import *
+import storage
+from storage import *
 import tkinter
 from tkinter import *
 
@@ -32,6 +32,22 @@ def getJSON(url):
 				return data
 			break
 
+
+def retrieveImage(url):
+	from urllib.error import URLError, HTTPError
+	i=0
+	from PIL import Image
+	while i<5:
+		i=i+1
+		try:
+			urllib.request.urlretrieve(url, 'temp.jpg')
+		except URLError as e:
+			print('Url Error')
+		except HTTPError as e:
+			print('HTTP Error')
+		else:
+			im=Image.open('temp.jpg')
+			return im
 #retrieve EXIF
 def getEXIF(id):
 	url='https://api.flickr.com/services/rest/?method=flickr.photos.getExif&api_key=0fb2ef4f2a015b331d5cbab58f7f05e9&photo_id='+id+'&format=json&nojsoncallback=1'
@@ -54,18 +70,24 @@ def getGeo(id):
 		tup=(float(locate['latitude']), float(locate['longitude']), float(locate['accuracy']))
 		return tup
 #Takes flickr ImageID then finds the jpeg link, and the date taken.  
-def getImageLink(id):
+def getImageDict(id):
 	data=getInfo(id)
-	urls=data['photo']['urls']
-	geo=getGeo(id)
-	pic=htmlParser.htmlParse(urls['url'][0]['_content'])      #grabbing image jpeg link.  Only grabbing photos with dates.  
-	if pic is not None:
-		date=pic[1]
-		dateString = str(date[0]) + "-" + str(date[1]) + "-" + str(date[2])
-		imageDict={'ImageID': id, 'Url': pic[0], 'DateTaken': dateString, 'gps': geo}
-		return imageDict
-	else:
-		return 'fail' #<--If parser fails to find a date
+	if data is not None:
+		urls=data['photo']['urls']
+		geo=getGeo(id)
+		pic=htmlParser.htmlParse(urls['url'][0]['_content'])      #grabbing image jpeg link.  Only grabbing photos with dates.  
+		if pic is not None:
+			date=pic[1]
+			dateString = str(date[0]) + "-" + str(date[1]) + "-" + str(date[2])
+			imageDict={'ImageID': id, 'Url': pic[0], 'DateTaken': dateString, 'gps': geo}
+			return imageDict
+	
+	return 'fail' #<--If parser fails to find a date
+def getImageTup(id):
+	imageDict=getImageDict(id)
+	if imageDict !='fail':
+		im=retrieveImage(imageDict['Url'])
+		return (im, imageDict)
 
 #uses geoTrends in analysis to parse through images and return a dict of the ones that fit the desired geo parameters (does not modify search parameters)
 def targetedGeoSearch(url, geotrends, num):
@@ -90,7 +112,7 @@ def targetedGeoSearch(url, geotrends, num):
 		photos=data['photos']['photo']
 		for photo in photos:
 			i=i+1	
-			imageDict=getImageLink(photo['id'])
+			imageDict=getImageDict(photo['id'])
 			if imageDict!='fail' and imageDict['gps'] is not None:
 				dist1=calcDistance(imageDict['gps'][0], geotrends[0]['lat'], imageDict['gps'][1], geotrends[0]['lon'])
 				dist2=calcDistance(imageDict['gps'][0], geotrends[1]['lat'], imageDict['gps'][1], geotrends[1]['lon'])
@@ -118,19 +140,21 @@ def targetedGeoSearch(url, geotrends, num):
 	return list1
 
 #Class used to search flickr and store links to images from the resulting search
-#based on user input in searchDisplay.py, the class can launch packageCreator which makes a searchPackage (from phenImage.py) with desired size and length
+#based on user input in searchDisplay.py, the class can launch packageCreator which makes a searchPackage (from storage.py) with desired size and length
 #In the future, must create dedicated flickr api search class (with other apis) and have this be a master search class which interacts with the api classes.
 #Class primarily used with searchDisplay.py 	  
 class Search:
+
 	package=searchPackage()  #one search package used and updated
-	pullnum=0               
+	pullnum=0	       
 	pullPic=''
 	printnum=0
 	search_type=''
 	searchUrls=[]  #Array of searches used in respective search
 	links=[]
 	pullnum=0
-	ids=[]  #one set of ids kept and updated.  This is the 'image cache' in display. 
+	ids=[]  #one set of ids kept and updated.  This is the 'image cache' in display.
+	imageIndex=0 
 	def search(self, t, p):  #t is an array of search types, and p is an array of parameters.  Types come pre formattted from searchDisplay to fit flickrs API
 		idset=[]
 		url='https://api.flickr.com/services/rest/?method=flickr.photos.search&api_key=0fb2ef4f2a015b331d5cbab58f7f05e9'  #This link uses API key from Ehren Marschall
@@ -156,13 +180,23 @@ class Search:
 			self.ids.append(id)   #appending flickr photo ids
 			j=j+1
 		self.searchUrls.append(url)
-
+	
+	def imageCircle(self, i):
+		imageIndex=imageIndex+i
+		imageIndex=imageIndex%len(self.ids)
+		imageTup=getImageTup(self.ids[imageIndex])
+		if imageTup is not None:
+			return imageTup
+		else:
+			return self.imageCircle(i)			
+	
 	def clear(self):  #clearing image (id) cache
 		print("cleared")
 		self.pullnum=0
 		del self.searchUrls[:]
 		del self.links[:]
 		del self.ids[:]
+
 
 	def pull(self):    #pulling image data to be displayed using Flickr.photos.getInfo.  Pulls one image's data
 		if self.pullnum<len(self.ids):
@@ -180,19 +214,34 @@ class Search:
 				self.pull()
 		return "There are no more cached photos"	
 
-	def makePackage(self, numphotos, name, path, images):  #creating list of image ids and links, of length numphotos to be passed into searchPackage to create a package.  Returns package to searchDisplay   
+	def makePackage(self, numphotos, name, dir, images):  #creating list of image ids and links, of length numphotos to be passed into searchPackage to create a package.  Returns package to searchDisplay   
 		i=0
 		j=0
-		imgInfo=[]
 		newids=[]
-		while (i<numphotos and j<len(self.ids)):
-			imageDict=getImageLink(self.ids[j])
-			if imageDict!='fail':
-				imgInfo.append(imageDict.copy())
-				newids.append(self.ids[j])
-				i=i+1
-			j=j+1
-		images.create(name, len(imgInfo), self.searchUrls, imgInfo, path)
+		urlCounter=0
+		images.create(name, self.searchUrls, dir)
+		while urlCounter<len(self.searchUrls) and i<numphotos:
+			url=self.searchUrls[urlCounter]
+			urlCounter=urlCounter+1
+			data=getJSON(url)
+			page=1
+			t=0
+			while page<=((int(data['photos']['total'])/500)+1) and i<numphotos:
+				page=page+1
+				if data is not None:
+					photos=data['photos']['photo']
+					for photo in photos:					
+						imageTup=getImageTup(photo['id'])
+						if imageTup is not None:
+							images.add(imageTup[0], imageTup[1])
+							print('added image '+str(i)+'/'+str(numphotos))
+							i=i+1
+							if i==numphotos:
+								break
+				data=getJSON(url+'&page='+str(page))
+		images.writedata()
+		
+
 
 	def packageCreator(self, dir, images, top2):  #This is a UI made for the user to specify if they want to import a package, or make a new one with their cache of ids.  User specifies name and number of photos
 		array=[]

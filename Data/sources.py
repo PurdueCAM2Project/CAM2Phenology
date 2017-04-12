@@ -18,10 +18,12 @@ class LocalStorage(object):
 		self.total=len(self.images)
 
 	def getImage(self, index):
+		index=index%self.total
 		if index<self.total:
 			return data.getImage(self.directory+self.images[index])
 
 	def getEXIF(self, index):
+		index=index%self.total
 		if index<self.total:
 			return data.getEXIF(self.directory+self.images[index])
 
@@ -41,6 +43,8 @@ class LocalStorage(object):
 		del self.images[:]
 		os.rmdir(self.directory)
 
+
 def makeLocalStorage(directory):
 	source=LocalStorage(directory)
 	return source
+defaultStorage=makeLocalStorage('/mnt/d/data/Phenology/packages/CCLargeGeo/')
