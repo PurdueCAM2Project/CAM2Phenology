@@ -8,6 +8,8 @@ def display():
 #important variables
 dataDict={}
 coordinates=[]
+if not os.path.exists('data/temp'):
+	os.makedirs('data/temp')
 if not os.path.isfile('preferences.txt'):
 	with open('preferences.txt', 'w+') as file:
 		file.write('data/')
@@ -16,9 +18,20 @@ with open('preferences.txt') as file:
 dir=preferences[0]
 if not os.path.exists(dir):
 	os.makedirs(dir)
+dir='/mnt/d/data/Phenology/data/'
+
 localData=os.listdir(dir)
 localData.append(' ')
-testSource=LocalStorage(dir+'CCLargeGeo/')
+print(localData)
+
+"""t=['text']
+p=['Smoky Mountains hello']
+ws=WebSearch()
+ws.search(t, p)
+print('test')
+ws.saveAll(dir+'test/')"""
+
+#testSource=LocalStorage(dir+'CCLargeGeo/')
 def changeStorage(newDir):
 	with open('preferences.txt','w+') as file:
 		preferences[0]=newDir+'/'
@@ -80,21 +93,80 @@ def makeGMPlot(gmCoordinates):
 	gmap.scatter(lats, longs, 'r', size=20, marker=False)
 	gmap.draw('/mnt/c/Users/emars/Desktop/ccLargeGeoPlot2.html')
 
+def saveSearch(types, parameters, name):
+	save_s="Name: "+name+" Source: Flickr Types: "+str(types)+" Parameters: "+str(parameters)
+	with open('data/savedSearches.txt', 'a+') as file:
+		file.write(save_s+'\n')
+	file.close()
 
-def clusterPlot(source):	
+def appendSearch(source_name):
+	searches=[]
+	circles=[]
+	plot_groups=[]
+	if source_name!="":
+		import analysis
+		source=LocalStorage(dir+source_name)
+		groups=[]
+		print("Getting Coordinates...")
+		coordinates=getGeo(source)
+		print("Analyzing...")
+		analysis_dict=analysis.geoAnalyze(coordinates)
+		groups.append(coordinates)
+		plot_groups.append(('scatter', groups))
+	user=''
+	print("Making Plot...")
+	data.makeGMPlot(plot_groups, analysis_dict['center'], dir+'temp')
+	while(user!='c' and user!='e'):
+		lat=input("enter latitude")
+		long=input("enter longitude")
+		rad=input("enter radius")
+		circle=('circle', [[(float(lat), float(long))]], float(rad))
+		plot_groups.append(circle)
+		print("Making Plot...\n")
+		data.makeGMPlot(plot_groups,  analysis_dict['center'],  dir+'temp')
+		user=input("y, a, n, or c")
+		if user=='a':
+			types=['lat', 'lon', 'radius']
+			radius=float(rad)/1000
+			parameters=[str(lat), str(long), str(radius)]
+			searches.append((types, parameters))
+		elif user=='e':
+			for search in searches:
+				s=WebSearch()
+				s.search(search[0], search[1])
+				s.saveAll(dir+source_name)
+				saveSearch(search[0], search[1], dir+source_name)
+			break
+		else:
+			plot_groups.pop(len(plot_groups)-1)
+
+"""s=WebSearch()
+types=['lat', 'lon', 'radius']
+#radius=float(rad)/1000
+parameters=['35.6583', '-83.52', '1']
+s.search(types, parameters)
+s.saveAll(dir+'test/')
+saveSearch(types, parameters, dir+source_name)"""
+	
+#appendSearch('CCLargeGeo/')
+		
+
+def clusterPlot(source, name):	
 	import analysis
 	from analysis import geoCluster
 	coordinates=getGeo(source)
-	dict=geoCluster(coordinates, .1)
+	dict=geoCluster(coordinates, .05)
 	groups=[]
 	for cluster in dict['clusters']:
 		groups.append(cluster['points'])
-	data.makeGMPlot(groups)
+	data.makeGMPlot([('scatter', groups)], dict['center'],  dir+name)
 
+source=LocalStorage(dir+'smoky_mountains/')
+clusterPlot(source, 'Smoky Mountains Cluster2')
 def makeTimeSlider(source):
 	from data import getDates, TimeSlider
 	from analysis import dateSort, dateAnalyze
-	dates=getDates(testSource)
+	dates=getDates(source)
 	new_dates=dateSort(dates)
 	print(new_dates)
 	info=dateAnalyze(new_dates)
@@ -124,6 +196,10 @@ class ImageManager(object):
 		self.activeSource=source
 		self.sourceList[name+'/']=(source, 0)
 		 
+	def horizonDetection(self):
+		self.activeSource.horizonDetect(self.index)
+
+		self.activeImage=data.getImage('gray_image.jpg')
 
 	def getNext(self):
 		self.index=self.index+1
