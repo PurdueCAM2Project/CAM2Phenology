@@ -161,13 +161,15 @@ def clusterPlot(source, name):
 		groups.append(cluster['points'])
 	data.makeGMPlot([('scatter', groups)], dict['center'],  dir+name)
 
-source=LocalStorage(dir+'smoky_mountains/')
-clusterPlot(source, 'Smoky Mountains Cluster2')
+#source=LocalStorage(dir+'smoky_mountains/')
+#clusterPlot(source, 'Smoky Mountains Cluster2')
 def makeTimeSlider(source):
 	from data import getDates, TimeSlider
 	from analysis import dateSort, dateAnalyze
 	dates=getDates(source)
+	print('got dates')
 	new_dates=dateSort(dates)
+	print('sorted')
 	print(new_dates)
 	info=dateAnalyze(new_dates)
 	return TimeSlider(source, new_dates, info)

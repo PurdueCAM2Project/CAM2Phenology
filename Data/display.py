@@ -1,8 +1,8 @@
 import tkinter
 from tkinter import *
 from PIL import Image, ImageTk
-import frontEnd
-from frontEnd import *
+import control
+from control import *
 import matplotlib
 matplotlib.use('TkAgg')
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
@@ -10,7 +10,7 @@ from matplotlib.figure import Figure
 
 
 root=tkinter.Tk()
-
+filterFlag=0
 
 def plot():
 	plotAllPoints(sourceVar.get(), a)
@@ -69,7 +69,15 @@ def goTo():
 	print(mn+', '+dy+', '+yr)
 	imageDisplay.goTo(yr, mn, dy)
 	configureDisplay()	
-
+def showHorizon():
+	global filterFlag
+	if filterFlag==0:
+		imageDisplay.horizonDetection()
+		filterFlag=1
+	else:
+		imageDisplay.getCurrent()
+		filterFlag=0
+	configureDisplay()
 
 imageDisplay=ImageManager()
 sourceVar=StringVar(root)
@@ -99,18 +107,21 @@ monthEntry=Entry(root, bd=5, width=5)
 dayEntry=Entry(root, bd=5, width=5)
 localData=os.listdir('data')
 
-dataMenu=OptionMenu(root, dataVar, *frontEnd.localData, command=newLocal)
+
+dataMenu=OptionMenu(root, dataVar, *control.localData, command=newLocal)
 dataMenu.grid(row=8, column=0)
 next=Button(root, text='>>>', width=5, command=next)
 pre=Button(root, text='<<<', width=5, command=previous)
 plot=Button(root, text='Plot Geo', width=5, command=plot)
 newSlider=Button(root, text='time slider', command=newTimeSlider) 
-nextDay=Button(root, text='next day', width=5, command=nextD)
-previousDay=Button(root, text='previous day', width=5, command=previousD)
-nextYear=Button(root, text='next year', width=5, command=nextY)
-previousYear=Button(root, text='previous year', width=5, command=previousY)
-goToDay=Button(root, text='go to day', width=5, command=goTo)
+nextDay=Button(root, text='next day', width=8, command=nextD)
+previousDay=Button(root, text='previous day', width=8, command=previousD)
+nextYear=Button(root, text='next year', width=8, command=nextY)
+previousYear=Button(root, text='previous year', width=8, command=previousY)
+goToDay=Button(root, text='go to day', width=8, command=goTo)
+hd=Button(root, text='horizon detect', width=8, command=showHorizon)
 
+hd.grid(row=5, column=0)
 newSlider.grid(row=16, column=11)
 yearEntry.grid(row=16, column=14)
 monthEntry.grid(row=16, column=13)
@@ -120,7 +131,7 @@ next.grid(row=17, column=19)
 pre.grid(row=17, column=5)
 nextDay.grid(row=17, column=17)
 nextYear.grid(row=17, column=16)
-previousDay.grid(row=17, column=6)
-previousYear.grid(row=17, column=5)
+previousDay.grid(row=17, column=8)
+previousYear.grid(row=17, column=7)
 goToDay.grid(row=16, column=15)
 root.mainloop()

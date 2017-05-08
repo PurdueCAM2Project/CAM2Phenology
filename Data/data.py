@@ -4,17 +4,17 @@ import os
 import os.path
 
 
-def initialImage(dict, location, im):
+def initialImage(image_dict, location):
 	import datetime
 	from datetime import datetime
 
-	im.save(location)
+	location=location+image_dict['ImageID']+'.jpg'
 
 	exif_dict=piexif.load(location)
-	exif_dict['Exif'][piexif.ExifIFD.DateTimeOriginal]=dict['DateTaken']
+	exif_dict['Exif'][piexif.ExifIFD.DateTimeOriginal]=image_dict['DateTaken']
 	exif_dict['Exif'][piexif.ExifIFD.DateTimeDigitized]=str(datetime.today())
-	exif_dict['Exif'][piexif.ExifIFD.ImageUniqueID]=dict['ImageID']
-	exif_dict['Exif'][piexif.ExifIFD.UserComment]=str(dict)
+	exif_dict['Exif'][piexif.ExifIFD.ImageUniqueID]=image_dict['ImageID']
+	exif_dict['Exif'][piexif.ExifIFD.UserComment]=str(image_dict)
 	exif_bytes=piexif.dump(exif_dict)
 	piexif.insert(exif_bytes, location)
 
@@ -23,6 +23,7 @@ def insertRating(dict, location):
 	import datetime
 	from datetime import datetime
 
+	location=location+dict['ImageID']
 	exif_dict=piexif.load(location)
 	exif_dict['Exif'][piexif.ExifIFD.DateTimeDigitized]=str(datetime.today())
 	rateDict=eval(exif_dict['Exif'][piexif.ExifIFD.UserComment])
@@ -34,6 +35,17 @@ def insertRating(dict, location):
 	exif_dict['Exif'][piexif.ExifIFD.UserComment]=str(rateDict)
 	exif_bytes=piexif.dump(exif_dict)
 	piexif.insert(exif_bytes, location)
+
+def cleanDir(directory):
+	import os
+	import piexif
+	dir=os.listdir(directory)
+	for each in dir:
+		try:
+			exif_dict=piexif.load(directory+each)
+		except Exception as e:
+			print(each+' removed')
+			os.remove(directory+each)
 
 def getGPS(exif_dict):
 	dict=eval(exif_dict['Exif'][piexif.ExifIFD.UserComment])
@@ -73,25 +85,35 @@ def getGeo(source):
 		i=i+1
 	return coordinates
 	
-def makeGMPlot(coordinateGroups):
+def makeGMPlot(coordinateGroups, center,  plot_dir):
 	import gmplot
-	gmap=gmplot.GoogleMapPlotter(35.6583, -83.5200, 13.8)
+	import gmplot.color_dicts
+	gmap=gmplot.GoogleMapPlotter(center[0], center[1], 10)
 	lats=[]
 	longs=[]
-	colors = ['r', 'b', 'c', 'm', 'w', 'k', 'y', 'g']
+	colors = list(gmplot.color_dicts.html_color_codes.keys()) 
 	i=0
-	for coordinates in coordinateGroups:
-		i=i+1
-		print (i)
-		lats=[]
-		longs=[]
-		for coordinate in coordinates:
-			lats.append(coordinate[0])
-			longs.append(coordinate[1])
-		#gmap.heatmap(lats, longs, radius=50, threshold=40000, dissipating=True)
-		i=i%len(colors)
-		gmap.scatter(lats, longs, colors[i], size=25, marker=False)
-	gmap.draw('/mnt/c/Users/emars/Desktop/ccLargeGeoClusterPlot.TEST.html')
+	heat_lats=[]
+	heat_longs=[]
+	for group in coordinateGroups:
+		print('test')
+		for coordinates in group[1]:
+			i=i+1
+			print (i)
+			lats=[]
+			longs=[]
+			for coordinate in coordinates:
+				lats.append(coordinate[0])
+				longs.append(coordinate[1])
+				heat_lats.append(coordinate[0])
+				heat_longs.append(coordinate[1])
+			i=i%len(colors)
+			if group[0]=='scatter':
+				gmap.scatter(lats, longs, colors[i], size=41, marker=False)
+			elif group[0]=='circle':
+				gmap.circle(lats[0], longs[0], group[2])
+	#gmap.heatmap(heat_lats, heat_longs, radius=80, threshold=160, opacity=0.3, dissipating=True)
+	gmap.draw(plot_dir+'.html')
 
 
 #Modules to deal with dates
