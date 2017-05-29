@@ -6,32 +6,32 @@ import os.path
 def display():
 	import display
 #important variables
-dataDict={}
 coordinates=[]
 if not os.path.exists('data/temp'):
 	os.makedirs('data/temp')
+
+#file to keep analyzed data
+if not os.path.exists('dataAnalysis'):
+	os.makedirs('dataAnalysis')
+
+# File to keep preferences.  Noteably storage directory for images
 if not os.path.isfile('preferences.txt'):
 	with open('preferences.txt', 'w+') as file:
-		file.write('data/')
+		dir='data/'
+		d=input("Please specify your image storage directory\n Press Enter for default (data/)")
+		if d!='':
+			dir=d
+			file.write(dir)
+		else:
+			file.write('data/')
 with open('preferences.txt') as file:
 	preferences=file.read().splitlines()
 dir=preferences[0]
-if not os.path.exists(dir):
-	os.makedirs(dir)
-dir='/mnt/d/data/Phenology/data/'
 
 localData=os.listdir(dir)
 localData.append(' ')
 print(localData)
 
-"""t=['text']
-p=['Smoky Mountains hello']
-ws=WebSearch()
-ws.search(t, p)
-print('test')
-ws.saveAll(dir+'test/')"""
-
-#testSource=LocalStorage(dir+'CCLargeGeo/')
 def changeStorage(newDir):
 	with open('preferences.txt','w+') as file:
 		preferences[0]=newDir+'/'
@@ -43,7 +43,7 @@ def newLocalStorage(directory, buffer):
 	source=sources.makeLocalStorage(dir+directory+'/')
 	newList=DataList(copy.copy(source), int(buffer))
 
-#Methods to deal with pyplot in display
+"""#Methods to deal with pyplot in display
 def modifyPlot(plotCoordinates, plot):
 	import matplotlib.pyplot
 	i=0
@@ -76,9 +76,9 @@ def removePoint(sourceString, plot):
 	coordinates.remove(coordinate)
 	modifyPlot(coordinates, plot)
 #END pyplot methods
+"""
 
-#below methods to create and manipulate google map plots
-def makeGMPlot(gmCoordinates):
+"""def makeGMPlot(gmCoordinates):
 	import gmplot
 	from data import getGeo
 	lats=[]
@@ -91,14 +91,16 @@ def makeGMPlot(gmCoordinates):
 	gmap=gmplot.GoogleMapPlotter(35.6583, -83.5200, 13.8)
 #       gmap.heatmap(lats, longs, radius=50, threshold=40000, dissipating=True)
 	gmap.scatter(lats, longs, 'r', size=20, marker=False)
-	gmap.draw('/mnt/c/Users/emars/Desktop/ccLargeGeoPlot2.html')
+	gmap.draw('/mnt/c/Users/emars/Desktop/ccLargeGeoPlot2.html')"""
 
+#This is so we can keep track of searches.
 def saveSearch(types, parameters, name):
 	save_s="Name: "+name+" Source: Flickr Types: "+str(types)+" Parameters: "+str(parameters)
 	with open('data/savedSearches.txt', 'a+') as file:
 		file.write(save_s+'\n')
 	file.close()
 
+#Method to append images to existing data via flickr
 def appendSearch(source_name):
 	searches=[]
 	circles=[]
@@ -114,6 +116,8 @@ def appendSearch(source_name):
 		groups.append(coordinates)
 		plot_groups.append(('scatter', groups))
 	user=''
+
+	#Making initial plot
 	print("Making Plot...")
 	data.makeGMPlot(plot_groups, analysis_dict['center'], dir+'temp')
 	while(user!='c' and user!='e'):
@@ -125,12 +129,16 @@ def appendSearch(source_name):
 		print("Making Plot...\n")
 		data.makeGMPlot(plot_groups,  analysis_dict['center'],  dir+'temp')
 		user=input("y, a, n, or c")
+
+		# Appending circles to search
 		if user=='a':
 			types=['lat', 'lon', 'radius']
 			radius=float(rad)/1000
 			parameters=[str(lat), str(long), str(radius)]
 			searches.append((types, parameters))
-		elif user=='e':
+		
+		#This is where the searches are executed.  There is a search for every appended circle
+		elif user=='e': 
 			for search in searches:
 				s=WebSearch()
 				s.search(search[0], search[1])
@@ -140,16 +148,6 @@ def appendSearch(source_name):
 		else:
 			plot_groups.pop(len(plot_groups)-1)
 
-"""s=WebSearch()
-types=['lat', 'lon', 'radius']
-#radius=float(rad)/1000
-parameters=['35.6583', '-83.52', '1']
-s.search(types, parameters)
-s.saveAll(dir+'test/')
-saveSearch(types, parameters, dir+source_name)"""
-	
-#appendSearch('CCLargeGeo/')
-		
 
 def clusterPlot(source, name):	
 	import analysis
@@ -161,20 +159,49 @@ def clusterPlot(source, name):
 		groups.append(cluster['points'])
 	data.makeGMPlot([('scatter', groups)], dict['center'],  dir+name)
 
-#source=LocalStorage(dir+'smoky_mountains/')
-#clusterPlot(source, 'Smoky Mountains Cluster2')
+#Making a timeslider.  Organizes images into their respective days.   
+#This uses written date analysis.  If a date analysis is not written, then This method writes the data first for future use. 
 def makeTimeSlider(source):
-	from data import getDates, TimeSlider
+	import json
+	from data import TimeSlider
+	array=source.directory.split('/')
+	name=array[len(array)-2]
+	if not os.path.isfile('dataAnalysis/'+name+'.json'):
+		analyzeDates(source)
+	with open('dataAnalysis/'+name+'.json') as file:
+		data=json.load(file)
+	file.close()
+	return TimeSlider(source, data['images'], data['info'])
+
+#Writing date analysis for a set of images to a file in json format
+def analyzeDates(source):
+	import json
+	from data import getDates
 	from analysis import dateSort, dateAnalyze
 	dates=getDates(source)
-	print('got dates')
 	new_dates=dateSort(dates)
-	print('sorted')
-	print(new_dates)
 	info=dateAnalyze(new_dates)
-	return TimeSlider(source, new_dates, info)
+	dated_images=[]
+	for date in new_dates:
+		days=[]
+		for day in date[1]:
+			days.append(source.images[day])
+		dated_images.append((date[0], days))
+	dump_dict={'images': dated_images, 'info': info}
+	print(source.directory)
+	array=source.directory.split('/')
+	name=array[len(array)-2]
+	with open('dataAnalysis/'+name+'.json', 'w+') as file:
+		json.dump(dump_dict, file)
+	file.close()
 
+#source=LocalStorage(dir+'CCLargeGeo/')
+#analyzeDates(source)
+#ts=makeTimeSlider(source)
+#print(ts.getEXIF(0))	
+	
 
+#This class is used to manage the images in display
 class ImageManager(object):
 
 	from data import TimeSlider
@@ -197,7 +224,9 @@ class ImageManager(object):
 		self.index=0
 		self.activeSource=source
 		self.sourceList[name+'/']=(source, 0)
-		 
+
+
+	#Using GLCM horizon detection	 
 	def horizonDetection(self):
 		self.activeSource.horizonDetect(self.index)
 

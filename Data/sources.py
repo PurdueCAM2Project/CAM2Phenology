@@ -118,18 +118,22 @@ class WebSearch():
 		index=index%self.total
 		return data.getEXIF(self.directory+self.images[index])
 
+#class used to access data stored locally in ntfs file format
 class LocalStorage(object):
 	
+	#class is initialized with a directory
 	def __init__(self, directory):
 		self.directory=directory
 		self.images=data.parseDir(directory)
 		self.total=len(self.images)
 
+	#returns the image with PIL accessed by respective index
 	def getImage(self, index):
 		index=index%self.total
 		if index<self.total:
 			return data.getImage(self.images[index])
 
+	#returns EXIF by index
 	def getEXIF(self, index):
 		index=index%self.total
 		if index<self.total:
@@ -151,6 +155,9 @@ class LocalStorage(object):
 	def removeAll(self):
 		del self.images[:]
 		os.rmdir(self.directory)
+
+	#using horizon detection module
+	#saves image as gray_image.jpg
 	def horizonDetect(self, index):
 		import horizonDetection
 		from horizonDetection import findHorizon

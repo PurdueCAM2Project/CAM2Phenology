@@ -3,7 +3,10 @@ from PIL import Image
 import os
 import os.path
 
+"""This file contains utility methods for dealing with image metadata
+We will be using piexif for all EXIF manipulation"""
 
+#put initial EXIF data into image
 def initialImage(image_dict, location):
 	import datetime
 	from datetime import datetime
@@ -14,11 +17,12 @@ def initialImage(image_dict, location):
 	exif_dict['Exif'][piexif.ExifIFD.DateTimeOriginal]=image_dict['DateTaken']
 	exif_dict['Exif'][piexif.ExifIFD.DateTimeDigitized]=str(datetime.today())
 	exif_dict['Exif'][piexif.ExifIFD.ImageUniqueID]=image_dict['ImageID']
-	exif_dict['Exif'][piexif.ExifIFD.UserComment]=str(image_dict)
+	exif_dict['Exif'][piexif.ExifIFD.UserComment]=str(image_dict) #this is nearly all of the data. TODO: put gps data into legitimate EXIF tag
 	exif_bytes=piexif.dump(exif_dict)
 	piexif.insert(exif_bytes, location)
 
 
+#Inserting a rating into the EXIF
 def insertRating(dict, location):
 	import datetime
 	from datetime import datetime
@@ -36,17 +40,23 @@ def insertRating(dict, location):
 	exif_bytes=piexif.dump(exif_dict)
 	piexif.insert(exif_bytes, location)
 
+#Testing to be sure that all of the images were initialed properly
 def cleanDir(directory):
 	import os
 	import piexif
 	dir=os.listdir(directory)
+	i=0
 	for each in dir:
+		i=i+1
+		if i%1000==0:
+			print(i)
 		try:
 			exif_dict=piexif.load(directory+each)
+			date=exif_dict['Exif'][piexif.ExifIFD.DateTimeOriginal]
 		except Exception as e:
 			print(each+' removed')
 			os.remove(directory+each)
-
+#Grabbing gps data from EXIF
 def getGPS(exif_dict):
 	dict=eval(exif_dict['Exif'][piexif.ExifIFD.UserComment])
 	location=dict['gps']
@@ -55,14 +65,22 @@ def getGPS(exif_dict):
 	else:
 		print('No GPS Data')
 
+
+def getID(im):
+	exif_dict=piexif.load(im.info['exif'])
+	
+	print( exif_dict['Exif'][piexif.ExifIFD.ImageUniqueID])
+	return exif_dict['Exif'][piexif.ExifIFD.ImageUniqueID]
+#returns the actual image (using PIL)
 def getImage(location):
 	im=Image.open(location)
 	return im
-
+#returns the exif data in piexif format
 def getEXIF(location):
 	exif_dict=piexif.load(location)
 	return exif_dict
 
+#This method is used to find all of the images in a directory which includes images in sub directories
 def parseDir(path):
 	images=[]
 	subDir=os.listdir(path)
@@ -73,6 +91,7 @@ def parseDir(path):
 			images.extend(parseDir(path+item+'/'))
 	return images
 
+#returns gps coordinates of all images in a source
 def getGeo(source):
 	i=0
 	coordinates=[]
@@ -84,7 +103,11 @@ def getGeo(source):
 			coordinates.append((location[0], location[1]))
 		i=i+1
 	return coordinates
-	
+
+#This plots data onto a google map using gmplot (from github)
+#It takes in a center which is the meanpoint
+#coordinateGroups are a list of groups of coordinates.  The groups normally represent difference geo-clusters and will be plotted in different colors.
+#Every group contains a type of plot (scatter, circle, heatmap) in the '0th' position	
 def makeGMPlot(coordinateGroups, center,  plot_dir):
 	import gmplot
 	import gmplot.color_dicts
@@ -117,11 +140,16 @@ def makeGMPlot(coordinateGroups, center,  plot_dir):
 
 
 #Modules to deal with dates
+
+#List to keep track of day values with respect to the different months
 month_list=[('Null', 365, 0), ('January', 0, 31), ('February', 31, 28), ('March', 59, 31),
 	('April', 90, 30), ('May', 120, 31), ('June', 151, 30), ('July', 181, 31),
 	('August', 212, 31), ('September', 243, 30), ('October', 273, 31),
 	('November', 304, 30), ('December', 334, 31)]
 
+
+
+#returns an array in the form [year, month, day] from a date string
 def parseDate(date_exif):
 	date_string=str(date_exif)
 	newDate=[]
@@ -132,7 +160,8 @@ def parseDate(date_exif):
 	newDate.append(int(date[1]))
 	newDate.append(int(date[2]))
 	return newDate
-	
+
+#returns day values for all images in a source.  They maintain and are accessed by their index. 	
 def getDates(source):
 	dates=[]
 	i=0
@@ -144,6 +173,7 @@ def getDates(source):
 		i=i+1
 	return dates
 
+#takes a date string and returns a day integer value
 def dateToDay(date):
 	date=str(date)
 	date=date.replace("b", "")
@@ -155,6 +185,7 @@ def dateToDay(date):
 	total_day=(year-1950)*365+month_list[month][2]+day
 	return total_day
 
+#takes in an integer and returns correspinding date string
 def dayToDate(day):
 	days=day%365
 	year=1950+(day//365)
@@ -182,11 +213,11 @@ class TimeSlider():
 	def getImage(self, i):
 		index=i
 		index=index%len(self.days[self.day_index][1])
-		return self.source.getImage(self.days[self.day_index][1][index])
+		return getImage(self.days[self.day_index][1][index])
 	def getEXIF(self, i):
 		index=i
 		index=index%len(self.days[self.day_index][1])
-		return	self.source.getEXIF(self.days[self.day_index][1][index])
+		return getEXIF(self.days[self.day_index][1][index])
 
 	def nextDay(self):
 		self.day_index=self.day_index+1
@@ -231,6 +262,8 @@ class TimeSlider():
 				self.day_index=i
 				break;
 			i=i+1
+
+#utility data structure not currently used
 class DataList(object):
 
 	def pushImages(self, num):
