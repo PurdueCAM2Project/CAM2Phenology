@@ -195,8 +195,8 @@ def analyzeDates(source):
 		json.dump(dump_dict, file)
 	file.close()
 
-#source=LocalStorage(dir+'CCLargeGeo/')
-#analyzeDates(source)
+source=LocalStorage(dir+'CCLargeGeo/')
+analyzeDates(source)
 #ts=makeTimeSlider(source)
 #print(ts.getEXIF(0))	
 	
@@ -209,6 +209,7 @@ class ImageManager(object):
 	from sources import LocalStorage
 	def __init__(self):
 		self.activeImage=Image.open('tempDisplay.jpg')
+		self.activeExif=piexif.load
 		self.activeSource=LocalStorage
 		self.index=0
 		self.sourceList={'Source Selection': (self.activeSource, 0)}
@@ -237,6 +238,8 @@ class ImageManager(object):
 		self.activeImage=self.activeSource.getImage(self.index)
 		print(self.activeSource.getEXIF(self.index))
 
+	def copy(self, dest):
+		self.activeSource.copyImage(self.index, dest)
 	def getCurrent(self):
 		self.activeImage=self.activeSource.getImage(self.index)
 		print(self.activeSource.getEXIF(self.index))

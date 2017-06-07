@@ -67,10 +67,12 @@ def getGPS(exif_dict):
 
 
 def getID(im):
-	exif_dict=piexif.load(im.info['exif'])
-	
+
+	exif_dict=piexif.load(im.info["exif"])	
 	print( exif_dict['Exif'][piexif.ExifIFD.ImageUniqueID])
-	return exif_dict['Exif'][piexif.ExifIFD.ImageUniqueID]
+	id=str(exif_dict['Exif'][piexif.ExifIFD.ImageUniqueID]).replace('b', '')
+	id=id.replace("'", "")
+	return id
 #returns the actual image (using PIL)
 def getImage(location):
 	im=Image.open(location)
@@ -182,7 +184,7 @@ def dateToDay(date):
 	year=int(date_array[0])
 	month=int(date_array[1])
 	day=int(date_array[2])
-	total_day=(year-1950)*365+month_list[month][2]+day
+	total_day=(year-1950)*365+month_list[month][1]+day
 	return total_day
 
 #takes in an integer and returns correspinding date string

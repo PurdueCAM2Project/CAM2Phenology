@@ -124,22 +124,44 @@ class LocalStorage(object):
 	#class is initialized with a directory
 	def __init__(self, directory):
 		self.directory=directory
-		self.images=data.parseDir(directory)
+		self.images=os.listdir(directory)
 		self.total=len(self.images)
 
 	#returns the image with PIL accessed by respective index
 	def getImage(self, index):
 		index=index%self.total
 		if index<self.total:
-			return data.getImage(self.images[index])
+			return data.getImage(self.directory+self.images[index])
+
+	def getImageByID(self, id):
+		if id in self.images:
+			return data.getImage(self.directory+id)
 
 	#returns EXIF by index
 	def getEXIF(self, index):
 		index=index%self.total
 		if index<self.total:
 			#print(str(self.images[index]))
-			return data.getEXIF(self.images[index])
+			return data.getEXIF(self.directory+self.images[index])
 
+	def getEXIFByID(self, id):
+		if id in self.images:
+			return data.getEXIF(self.directory+id)
+
+	#returning the ids of all photos in a geographical circle
+	def getInRange(self, lat, long, radius):
+		from analysis import calcDistance
+		circled_images=[]
+		for image in self.images:
+			location=data.getGPS(data.getEXIF(self.directory+image))
+			dist=calcDistance(location, (lat, long))
+			if dist<radius:
+				circled_images.append(image)
+		return circled_images
+
+	def copyImage(self, id, dest):
+		from shutil import copyfile
+		copyfile(self.directory+id, dest)
 
 	def hasImage(self, id):
 		return directory+id in self.images
@@ -149,7 +171,7 @@ class LocalStorage(object):
 		self.images.remove(id)
 
 	def removeImage_byIndex(self, index):
-		os.remove(self.images[index])
+		os.remove(self.directory+self.images[index])
 		self.images.pop(index)
 
 	def removeAll(self):
@@ -161,7 +183,7 @@ class LocalStorage(object):
 	def horizonDetect(self, index):
 		import horizonDetection
 		from horizonDetection import findHorizon
-		findHorizon(self.images[index])
+		findHorizon(self.directory+self.images[index])
 
 def makeLocalStorage(directory):
 	source=LocalStorage(directory)

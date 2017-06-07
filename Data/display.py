@@ -18,7 +18,8 @@ def plot():
 def configureDisplay():
 #	addPoint(sourceVar.get(), a)	
 #	pltCanvas.show()
-	image=imageDisplay.activeImage.resize((960, 540), Image.ANTIALIAS)
+	image=imageDisplay.activeImage
+	image=image.resize((960, 540), Image.ANTIALIAS)
 	im=ImageTk.PhotoImage(image)
 	canvas.image=im
 	canvas.create_image(0, 0, image=canvas.image, anchor='nw')
@@ -37,9 +38,12 @@ def sourceMenu():
 def save():
 	import data
 	from data import getID
+
 	print(saveEntry.get())
 	id=getID(imageDisplay.activeImage)
-	imageDisplay.activeImage.save(saveEntry.get()+str(id))
+	im=imageDisplay.activeImage
+	imageDisplay.copy(saveEntry.get()+str(id))
+	#im.save(saveEntry.get()+str(id), 'JPEG')
 	
 def newLocal(source):
 	imageDisplay.addLocal(source)

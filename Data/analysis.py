@@ -34,6 +34,7 @@ def calcMidpoint(coordinate1, coordinate2):
 	midlat=(coordinate1[0]+coordinate2[0])/2
 	midlong=(coordinate1[1]+coordinate2[1])/2
 	return (midlat, midlong)
+
 #Can add more data to coordinate tuple.  The first two values are lat,long.
 #Example: (lat, long, imageID)
 def geoAnalyze(coordinates):
@@ -203,6 +204,7 @@ def compareDate(date1, date2):
 	yearDiff=(date1[0]-date2[0])*365
 	totalDiff=yearDiff+dayDiff #Total difference, in days, of date1-date2
 	return totalDiff
+
 def dateSort(dates):
 	new_dates=[]
 	min_day=2030*365
