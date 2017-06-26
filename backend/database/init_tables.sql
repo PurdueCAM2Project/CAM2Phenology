@@ -29,7 +29,7 @@ create table images
 		references regions(name),
 	date_taken int not null,
 	index (date_taken),
-	date_retrieved timestamp,
+	date_retrieved datetime,
 	gps POINT,
 	latitude FLOAT(12, 9),
 	longitude FLOAT (12, 9),
