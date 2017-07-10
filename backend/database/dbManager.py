@@ -22,6 +22,13 @@ connection=pymysql.connect(host='128.46.213.21',
 							
 cursor=connection.cursor()							
 
+def query(sql, values=None):
+	if values is None:
+		cursor.execute(sql)
+	else:
+		cursor.execute(sql, values)
+	connection.commit()
+
 #insertion and deletion methods
 def insertRegion(name, num_images=0, mean_point=None):
 	sql= "INSERT IGNORE INTO regions (name, num_images, mean_point) VALUES (%s, %s, %s)"
@@ -43,7 +50,9 @@ def updateRegion(region_name):
 	cursor.execute(sql)
 	connection.commit()	
 
-#selection methods
+#--selection methods--
+
+#selects all images from a region
 def selectRegion(region_name):
 	"""returns an array of dictionaries corresponding to the database rows.
 	The array is ordered by date_taken"""
@@ -54,6 +63,23 @@ def selectRegion(region_name):
 	print(sql)
 	cursor.execute(sql)
 	return cursor.fetchall()
+	
+#selects specified number of images at random from all images
+def sampleImages(num_images=100):
+	"""Every image has a chance dictated by 'fragment'*1.01 to be selected.
+	This somewhat non-intuitive approach was used for efficiency"""
+	
+	sql="SELECT SUM(num_images) AS total_images FROM regions"
+	cursor.execute(sql)
+	total_images=cursor.fetchall()[0]['total_images']
+	fragment=float(num_images/total_images)
+	fragment=fragment*1.01
+	sql="SELECT * FROM images WHERE RAND()<=%s LIMIT %s"
+	cursor.execute(sql, (fragment, num_images))
+	return cursor.fetchall()
+	
+
+
 	
 	
 	

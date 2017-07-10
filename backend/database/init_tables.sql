@@ -23,7 +23,7 @@ create table clusters
 
 create table images 
 (
-	id BIGINT not NULL primary key,
+	id BIGINT not null primary key,
 	region char(25) not null,
 	foreign key(region)
 		references regions(name),
@@ -33,10 +33,9 @@ create table images
 	gps POINT,
 	latitude FLOAT(12, 9),
 	longitude FLOAT (12, 9),
-	source char(25),
+	source VARCHAR(2083) not null,
 	cluster_id int,
 	foreign key (cluster_id)
 		references clusters(id)
 
 );
-

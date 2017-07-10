@@ -1,22 +1,26 @@
-from data import *
-from sources import LocalStorage
+
+import sys
+sys.path.insert(0, '/mnt/d/PhenologyGit/backend/database')
+sys.path.insert(0, '/mnt/d/PhenologyGit/backend/utility')
+import data
+import dbManager
 
 
-#class used to plot and manipulate google map plots using gmplot (from github)
-class DataMap:
+
+#class used to plot and manipulate google map plots using gmplot (gmplot was found on github)
+class DataMap(object):
 	import os.path
-
 	import gmplot.color_dicts
 	
 	if not os.path.exists('plots'):
 		os.makedirs('plots')	
-
+	if not os.path.exists('Images'):
+		os.makedirs('Images')
+	
 	center=(0, 0)
-	lats=[]
-	longs=[]
-	image_coordinates=[]
+	points=[]
 	circles=[] #circles will be of the form (lat, long, radius)
-	zoom=3
+	zoom=10
 
 	def setCenter(c):
 		self.center=c
@@ -27,45 +31,41 @@ class DataMap:
 	def plotMap(self):
 		import gmplot
 		gmap=gmplot.GoogleMapPlotter(self.center[0], self.center[1], self.zoom)
-		
-		if self.lats:
-			gmap.scatter(self.lats, self.longs, 'r', size=40, marker=False)
+		lats, longs=zip(*self.points)
+		if self.points:
+			gmap.scatter(lats, longs, 'r', size=40, marker=False)
 		if self.circles:
 			for circle in self.circles:
 				gmap.circle(circle[0], circle[1], circle[2])
 		gmap.draw('plots/temp.html')
 
 	def addPoint(self, point):
-		self.lats.append(point[0])
-		self.longs.append(point[1])
+		self.points.append(point)
 
 	def removePoint(self, point):
-		index=image_coordinates.index(point)
-		image_coordinates.pop(index)
-		lats.pop(index)
-		longs.pop(index)
-
+		index=points.index(point)
+		self.points.pop(index)
+		
 	def clearPoints(self):
-		self.lats=[]
-		self.longs=[]
-		self.image_coordinates=[]
+		self.points=[]
 		
 	def clearCircles():
 		self.circles=[]
 
 
 #the procedural code below should be run to view, manipulate, and append data sets
-from sources import LocalStorage
-
 selected_images=[]
-source=LocalStorage
 selection=(0, 0, 0) #(lat, long, radius), used to select images within a circle
-dm=DataMap()
+selections=[] #list to store selections
 increment=.03 #increment used to move selection
-dir='data/'
+dm=DataMap()
+dm.circles=selections
+
 
 #loading a source on the google map and setting source 
-def loadSource(name):
+
+def loadLocalData(name, path='Images/'):
+	from source ismport LocalStorage
 	from data import getGeo
 	from analysis import geoAnalyze
 	
@@ -81,6 +81,23 @@ def loadSource(name):
 	print (dm.center)
 	print(dm.zoom)
 	dm.plotMap()
+	
+	
+def loadRegion(region_name):
+	images=dbManager.selectRegion(region_name)
+	points=[]
+	from analysis import geoAnalyze
+	for image in images:
+		point=(image['latitude'], image['longitude'])
+		dm.addPoint(point)
+		points.append(point)
+		
+	analysis_dict=geoAnalyze(points)
+	dm.center=analysis_dict['center']
+	print(dm.center)
+	dm.plotMap()
+	
+
 
 #setting selection circle
 def setSelect(lat, long, radius):
@@ -103,9 +120,6 @@ def makeSelection(name):
 	global selected_images
 	selected_images=source.getInRange(selection[0], selection[1], selection[2])
 	
-	
-
-#loadSource('web_ui_test')
 			
 
 

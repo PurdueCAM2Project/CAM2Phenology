@@ -75,6 +75,11 @@ def getDateTaken(exif_dict):
 def getDateRetrieved(exif_dict): #Date retrived is currently stored in the exif value "dateTimeDigitized".  I am unsure if this is correct.
 	return exif_dict['Exif'][piexif.ExifIFD.DateTimeDigitized]
 
+def getUrl(exif_dict):
+	dict=eval(exif_dict['Exif'][piexif.ExifIFD.UserComment])
+	url=dict['Url']
+	return url
+
 def getGPS(exif_dict):
 	dict=eval(exif_dict['Exif'][piexif.ExifIFD.UserComment])
 	location=dict['gps']
@@ -84,7 +89,7 @@ def getGPS(exif_dict):
 		print('No GPS Data')
 
 def getID(exif_dict):	
-	print( exif_dict['Exif'][piexif.ExifIFD.ImageUniqueID])
+	#print( exif_dict['Exif'][piexif.ExifIFD.ImageUniqueID])
 	id=str(exif_dict['Exif'][piexif.ExifIFD.ImageUniqueID]).replace('b', '')
 	id=id.replace("'", "")
 	return id
