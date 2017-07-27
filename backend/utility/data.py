@@ -4,19 +4,21 @@ import os
 import os.path
 
 """This file contains utility methods for dealing with image metadata
-We will be using piexif for all EXIF manipulation"""
+using piexif for all EXIF manipulation"""
+
+#Any images stored before 07/24 will have a deprecated storage format.  This file will produce errors when reading it.
 
 #put initial EXIF data into image
 def initialImage(image_dict, location):
 	import datetime
 	from datetime import datetime
 
-	location=location+image_dict['ImageID']+'.jpg'
+	location=location+image_dict['id']+'.jpg'
 
 	exif_dict=piexif.load(location)
-	exif_dict['Exif'][piexif.ExifIFD.DateTimeOriginal]=image_dict['DateTaken']
+	exif_dict['Exif'][piexif.ExifIFD.DateTimeOriginal]=image_dict['date_taken']
 	exif_dict['Exif'][piexif.ExifIFD.DateTimeDigitized]=str(datetime.today())
-	exif_dict['Exif'][piexif.ExifIFD.ImageUniqueID]=image_dict['ImageID']
+	exif_dict['Exif'][piexif.ExifIFD.ImageUniqueID]=image_dict['id']
 	exif_dict['Exif'][piexif.ExifIFD.UserComment]=str(image_dict) #this is nearly all of the data. TODO: put gps data into legitimate EXIF tag
 	exif_bytes=piexif.dump(exif_dict)
 	piexif.insert(exif_bytes, location)
@@ -75,6 +77,11 @@ def getDateTaken(exif_dict):
 def getDateRetrieved(exif_dict): #Date retrived is currently stored in the exif value "dateTimeDigitized".  I am unsure if this is correct.
 	return exif_dict['Exif'][piexif.ExifIFD.DateTimeDigitized]
 
+def getUrl(exif_dict):
+	dict=eval(exif_dict['Exif'][piexif.ExifIFD.UserComment])
+	url=dict['url']
+	return url
+
 def getGPS(exif_dict):
 	dict=eval(exif_dict['Exif'][piexif.ExifIFD.UserComment])
 	location=dict['gps']
@@ -84,7 +91,7 @@ def getGPS(exif_dict):
 		print('No GPS Data')
 
 def getID(exif_dict):	
-	print( exif_dict['Exif'][piexif.ExifIFD.ImageUniqueID])
+	#print( exif_dict['Exif'][piexif.ExifIFD.ImageUniqueID])
 	id=str(exif_dict['Exif'][piexif.ExifIFD.ImageUniqueID]).replace('b', '')
 	id=id.replace("'", "")
 	return id

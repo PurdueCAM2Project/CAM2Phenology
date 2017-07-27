@@ -7,7 +7,8 @@ create table regions
 (
 	name char(25) not null primary key,
 	num_images int,
-	mean_point POINT
+	mean_point POINT,
+	radius int
 );
 
 
@@ -23,8 +24,10 @@ create table clusters
 
 create table images 
 (
-	id BIGINT not null primary key,
-	region char(25) not null,
+	id BIGINT not null,
+	source varchar(10) not null,
+	primary key(id, source),
+	region char(25) null,
 	foreign key(region)
 		references regions(name),
 	date_taken int not null,
@@ -33,9 +36,10 @@ create table images
 	gps POINT,
 	latitude FLOAT(12, 9),
 	longitude FLOAT (12, 9),
-	source VARCHAR(2083) not null,
+	url VARCHAR(2083) not null,
 	cluster_id int,
 	foreign key (cluster_id)
-		references clusters(id)
+		references clusters(id),
+	alt_id BIGINT
 
 );

@@ -1,7 +1,10 @@
 import json
 import urllib.request
 
-with open('APIkeys.json', 'r') as file:
+#This was made to be its own independent search of flickr.
+#It has not been modified, but it is still currently used with general search classs
+
+with open('/mnt/d/PhenologyGit/backend/webscrape/APIkeys.json', 'r') as file:
 	keys=json.load(file)
 file.close()
 key=keys['flickr']
@@ -38,7 +41,8 @@ def search(types, parameters):
 		i=i+1
 	data=getJSON(url)
 	print(data)
-	print('Search Hits:'+data['photos']['total'])
+	#print('Search Hits:'+data['photos']['total'])
+	total=data['photos']['total']
 	done=0
 	page=1
 	while(done==0):
@@ -49,10 +53,10 @@ def search(types, parameters):
 			done=1
 		else:
 			page=page+1
-			print("Grabbing Page" +str(page))
+			#print("Grabbing Page" +str(page))
 			data=getJSON(url+'&page='+str(page))
-	print('Search Complete')
-	return ids
+	#print('Search Complete')
+	return (ids, total)
 
 def getInfo(id):
 	url=mUrl+'getInfo&api_key='+key+'&format=json&nojsoncallback=1&photo_id='+str(id)
@@ -91,15 +95,17 @@ def retrieveImage(url, id, dir):
 def getImageDict(id):
 	import htmlParser
 	data=getInfo(id)
+	image_dict={}
 	if data is not None:
 		urls=data['photo']['urls']
 		geo=getGeo(id)
 		pic=htmlParser.htmlParse(urls['url'][0]['_content'])      #grabbing image jpeg link.  Only grabbing photos with dates.
 		if pic is not None:
 			date=pic[1]
-			dateString = str(date[0]) + "-" + str(date[1]) + "-" + str(date[2])
-			imageDict={'ImageID': id, 'Url': pic[0], 'DateTaken': dateString, 'gps': geo}
-			return imageDict
+			dayint=0
+			dayint=dayint+int(date[0])*10000 + int(date[1])*100 + int(date[2])
+			image_dict={'id': id, 'url': pic[0], 'date_taken': dayint, 'gps': geo, 'source': 'flickr'}
+			return image_dict
 	#print('fail')
 	return 'fail' #<--If parser fails to find a date
 

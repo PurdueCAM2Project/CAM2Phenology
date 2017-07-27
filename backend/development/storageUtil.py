@@ -2,6 +2,11 @@
 import sys
 sys.path.insert(0, '/mnt/d/PhenologyGit/backend/database')
 sys.path.insert(0, '/mnt/d/PhenologyGit/backend/utility')
+sys.path.insert(0, '/mnt/d/PhenologyGit/backend/webscrape')
+sys.path.insert(0, '/mnt/d/PhenologyGit/backend/Storage')
+from imageStorage import ImageStorage
+import search
+from search import WebSearch
 import data
 import dbManager
 
@@ -60,12 +65,14 @@ selections=[] #list to store selections
 increment=.03 #increment used to move selection
 dm=DataMap()
 dm.circles=selections
+ws=WebSearch()  #general search class
+store=ImageStorage()
 
 
 #loading a source on the google map and setting source 
 
 def loadLocalData(name, path='Images/'):
-	from source ismport LocalStorage
+	from source import LocalStorage
 	from data import getGeo
 	from analysis import geoAnalyze
 	
@@ -97,7 +104,61 @@ def loadRegion(region_name):
 	print(dm.center)
 	dm.plotMap()
 	
-
+def makeSearch(lat, lon, radius): #for testing expediency, gps functionality is the only concern.
+							 #There are possibilities/utilities for much more.
+	types=[]
+	parameters=[]
+	types.append('lat')
+	types.append('lon')
+	types.append('radius')
+	parameters.append(str(lat))
+	parameters.append(str(lon))
+	parameters.append(str(radius))
+	ws.imageSearch(types, parameters)
+	
+def checkSearch():
+	failed=0
+	for id in ws.flickr_ids:
+		if dbManager.hasImage(id)==0:
+			failed=failed+1
+	print(str(failed)+' images failed to commit')
+	
+def commitSearchImages(start, end):
+	i=start
+	while i<end:
+		image_dict=ws.getSearchData(i)
+		if image_dict!='fail':
+			dbManager.insertImage(image_dict['id'], image_dict['source'], image_dict['date_taken'], (image_dict['gps'][0], image_dict['gps'][1]), image_dict['gps'][0], image_dict['gps'][1], url=image_dict['url'])
+		i+=1
+		if i%20==0:
+			print('Images '+str(start)+'-'+str(i)+'/'+str(ws.total)+' committed.')
+			print(image_dict)
+		
+		
+def commitSearch():
+	from multiprocessing import Process
+	print('Commiting '+str(ws.total)+' image metadata rows to database.')
+	"""interval=ws.total//4
+	p1=Process(target=commitSearchImages, args=(0, interval,))
+	p1.start
+	p2=Process(target=commitSearchImages, args=(interval, interval*2,))
+	p2.start()
+	p3=Process(target=commitSearchImages, args=(interval*2, interval*3,))
+	p3.start()
+	p4=Process(target=commitSearchImages, args=(interval*3, interval*4,))
+	p4.start()
+	p2.join()
+	p3.join()
+	p4.join() """
+	checkSearch()
+	print('Commital Complete.')
+	
+def storeImage(id, source, path=''):
+	url=dbManager.getUrl(id, source)
+	alt_id=store.downloadRequest(url)
+	dbManager.addAltID(id, source, alt_id)
+	store.serviceRequests()
+	
 
 #setting selection circle
 def setSelect(lat, long, radius):
