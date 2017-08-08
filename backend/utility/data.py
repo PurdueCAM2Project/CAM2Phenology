@@ -13,8 +13,6 @@ def initialImage(image_dict, location):
 	import datetime
 	from datetime import datetime
 
-	location=location+image_dict['id']+'.jpg'
-
 	exif_dict=piexif.load(location)
 	exif_dict['Exif'][piexif.ExifIFD.DateTimeOriginal]=image_dict['date_taken']
 	exif_dict['Exif'][piexif.ExifIFD.DateTimeDigitized]=str(datetime.today())

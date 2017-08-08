@@ -154,12 +154,20 @@ def commitSearch():
 	print('Commital Complete.')
 	
 def storeImage(id, source, path=''):
-	url=dbManager.getUrl(id, source)
-	alt_id=store.downloadRequest(url)
-	dbManager.addAltID(id, source, alt_id)
-	store.serviceRequests()
+	image_dict=dbManager.getImageInfo(id, source) #getting image metadata from database
+	alt_id=store.makeRequest(image_dict, 'download') #making request and getting storage id from storage system
+	dbManager.addAltID(id, source, alt_id) #recording storage id in database
+	store.serviceRequests()					#servicing requests
 	
-
+def horizonRequest(id, source):
+	image_dict=dbManager.getImageInfo(id, source)
+	if image_dict['alt_id'] is None:
+		storeImage(id, source)
+		image_dict=dbManager.getImageInfo(id, source)
+	request_id=store.makeRequest(image_dict, 'detect horizon')
+	store.serviceRequests()
+	print("horizon detection result stored at "+store.buildPath(request_id))
+	
 #setting selection circle
 def setSelect(lat, long, radius):
 	selection[0]=lat

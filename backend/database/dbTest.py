@@ -1,6 +1,6 @@
 import dbManager
 
-test=int(input("Please input test number.\nIf you do not know what this means, please read the code."))
+test=int(input("Please input test number."))
 
 def commitFolder(dir, region_name):
 	import data
@@ -28,7 +28,31 @@ elif test==2:
 	rows=dbManager.selectRegion(region)
 	for row in rows:
 		print (row)	
+	
+elif test==3:
+	rows=dbManager.sampleImages()
+	print(rows)
+	print("Number of Images: "+str(len(rows)))
+	rows=dbManager.sampleImages(num_images=50)
+	print(rows)
+	print("Number of Images: "+str(len(rows)))
+	rows=dbManager.sampleImages(num_images=1000)
+	#print(rows)
+	print("Number of Images: "+str(len(rows)))
+	
+def addUrl(dir):
+	import data
+	import os
+	images=os.listdir(dir)
+	sql="UPDATE images SET source=%s WHERE id=%s"
+	for image in images:
+		exif_dict=data.getEXIF(dir+image)
+		url=data.getUrl(exif_dict)
+		id=int(data.getID(exif_dict))
+		dbManager.query(sql, (url, id))		
 
+		
+		
 dbManager.connection.close()
 		
 		
