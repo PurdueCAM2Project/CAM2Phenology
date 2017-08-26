@@ -7,11 +7,27 @@ from PIL import Image
 import os.path
 from os.path import *
 
+def initialImage(dict, location, im):
+	import piexif	
+	import datetime
+	from datetime import datetime
+
+	im.save(location)
+
+	exif_dict=piexif.load(location)
+	exif_dict['Exif'][piexif.ExifIFD.DateTimeOriginal]=dict['DateTaken']
+	exif_dict['Exif'][piexif.ExifIFD.DateTimeDigitized]=str(datetime.today())
+	exif_dict['Exif'][piexif.ExifIFD.ImageUniqueID]=dict['ImageID']
+	exif_dict['Exif'][piexif.ExifIFD.UserComment]=str(dict)
+	exif_bytes=piexif.dump(exif_dict)
+	piexif.insert(exif_bytes, location)
+
 #inserts rating into exif data
 def insertRating(dict, location):
 	import piexif
 	import datetime
 	from datetime import datetime
+	
 	exif_dict=piexif.load(location)
 	exif_dict['Exif'][piexif.ExifIFD.DateTimeDigitized]=str(datetime.today())
 	rateDict=eval(exif_dict['Exif'][piexif.ExifIFD.UserComment])
@@ -24,18 +40,6 @@ def insertRating(dict, location):
 	exif_bytes=piexif.dump(exif_dict)
 	piexif.insert(exif_bytes, location)
 
-#puts initial exif data into photos	
-def initialExif(dict, location):
-	import piexif
-	import datetime
-	from datetime import datetime
-	exif_dict=piexif.load(location)
-	exif_dict['Exif'][piexif.ExifIFD.DateTimeOriginal]=dict['DateTaken']
-	exif_dict['Exif'][piexif.ExifIFD.DateTimeDigitized]=str(datetime.today())
-	exif_dict['Exif'][piexif.ExifIFD.ImageUniqueID]=dict['ImageID']
-	exif_dict['Exif'][piexif.ExifIFD.UserComment]=str(dict)
-	exif_bytes=piexif.dump(exif_dict)
-	piexif.insert(exif_bytes, location)
 
 
 #not currently used or functional
@@ -61,44 +65,27 @@ class searchPackage:
 	packageName=''
 	imageIndex=0
 	#add new image to package
-	def add(self, imgDict):
-		urllib.request.urlretrieve(imgDict['Url'], 'temp.jpg')
-		im=Image.open('temp.jpg')
-		imgDict['Rating']=-1 
-		location=self.path+imgDict['ImageID']+'.jpg'
-		if not os.path.isfile(location):
-			im.save(location)  #actual image passed from phen image.  This is essentially the storage class's only purpose at this point
-			initialExif(imgDict, location)
-			print('success')
-			self.photos.append(imgDict)  
+	def add(self, image, imageDict):
+		imageDict['Rating']=-1 
+		location=self.path+imageDict['ImageID']+'.jpg'
+		if not os.path.isfile(location):	
+			initialImage(imageDict, location, image)
+			self.photos.append(imageDict)
+			self.data['Total']=self.data['Total']+1
+			  
 		else:
 			print('photo already exists')
-	def create(self, name, tphotos, searchUrl, images, dir): #used to create a new package named: <name> of length <tphoto>, with dict of search urls, and array of image dictionaries 
+	def create(self, name, searchUrl, dir): #used to create a new package named: <name> of length <tphoto>, with dict of search urls, and array of image dictionaries 
 		from datetime import datetime
 		dateCreated=str(datetime.today())
-		self.data={'Name': name, 'Total': tphotos, 'Url': searchUrl, 'Overall Rating': 0, 'Rated': 0,'Date Created': dateCreated}  #dictionary that contains basic info. 
-		self.packageName=name    												#photos is a dict of photo info updated after rating
+		self.data={'Name': name, 'Url': searchUrl, 'Total': 0, 'Overall Rating': 0, 'Rated': 0,'Date Created': dateCreated, 'Photos': self.photos}  #dictionary that contains basic info. 
+		self.packageName=name
 		self.path=dir+name+'/'  #all photos stored in packages(or another dir)/<packagename>   Text file containing info is <packagename>.json in the same folder 
-		print (images)
 		self.packageName=name
 		if not os.path.exists(self.path):
 			os.makedirs(self.path)
-		with open(self.path+name+'.json', 'w+') as file:
-			i=0
-			j=0
-			while (i<tphotos):
-				j=j+1 
-				print(self.photos)
-				imgDict=images[i].copy()
-				self.add(images[i])
-				print('add')
-				i=i+1
-			self.data['Total']=j
-			self.data['Photos']=self.photos
-			json.dump(self.data, file)		
-		file.close()
 	
-#open pre made package (import)
+	#open pre made package (import)
 	def open(self, name, dir):
 		self.packageName=name
 		self.path=dir+name+'/'
@@ -110,6 +97,7 @@ class searchPackage:
 			file.close()
 			self.packageName=name
 			print (self.data['Name'])
+
 	def getImage(self, i): #used in searchDisplay
 			if(i==0):
 				self.imageIndex=0
@@ -121,8 +109,13 @@ class searchPackage:
 			self.imageIndex=self.imageIndex%self.data['Total']
 			im=Image.open(self.path+self.data['Photos'][self.imageIndex]['ImageID']+'.jpg')
 			tup=(im, self.data['Photos'][self.imageIndex])
-			return tup			
-		
+			return tup
+	"""	def stream(buffer, num):
+		i=0
+		while (i<num):
+			buffer.append(self.getImage(i))
+			i=i+1			
+	"""
 	def rate(self, qual, scen, scal, cover):   #rating method for individual photos.  Quality, scene, scale, coverage.(IntVar variables)    All 1-3 scale.  Rating is addition of these values
 		r=qual+scen+scal+cover
 		tempData=self.data['Photos'][self.imageIndex]
@@ -141,31 +134,23 @@ class searchPackage:
 		insertRating(tempData, self.path+tempData['ImageID']+'.jpg')
 		self.data['Overall Rating']=(self.data['Overall Rating']+r)/self.data['Rated']
 		self.data['Photos'][self.imageIndex]=tempData.copy()
-		
-			
-			
+					
 	def writedata(self):  #<save>='
-		with open(self.path+self.packageName+'.json', "w") as file:  
+		with open(self.path+self.packageName+'.json', "w+") as file:  
     			json.dump(self.data, file)
 		file.close()
-
 	
 	def getUrl(self):
 		return self.data['Url']
 
-	def getImages(n, f=2): #return a list of images of specified length
+	def getImages(r1, r2): #return a list of images of specified length
 		i=0
 		imList=[]
-		if f==2:
-			return self.photos
-		while i<n:
-		
-			if f==1:
-				im=Image.open(self.path+self.photos[i]['ImageID'])
-				tup=(self.photos[i], im)
-				imList.append(tup)
-			else:
-				imList.append(self.photos[i])
+		i=r1
+		while i<r2 and i<len(self.photos):
+			im=Image.open(self.path+self.photos[i]['ImageID'])
+			tup=(im, self.photos[i])
+			imList.append(tup)
 			i=i+1
 		return imList
 

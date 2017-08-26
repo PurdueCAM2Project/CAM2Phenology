@@ -24,15 +24,81 @@ def sortDict(list, key):
 		return sortDict(more, key)+same+sortDict(less, key)
 	else:
 		return list		
-	
 
-#Takes a RATED AND SORTED searchPackage (storage.wpy) and finds the best geo locations in the search 
-#All geo locations are printed on a grid with color corresponding to value. 
+def calcDistance(coordinate1, coordinate2):
+	import math
+	dist=math.sqrt((coordinate1[0]-coordinate2[0])**2+(coordinate1[1]-coordinate2[1])**2)
+	return dist
+
+def calcMidpoint(coordinate1, coordinate2):
+	midlat=(coordinate1[0]+coordinate2[0])/2
+	midlong=(coordinate1[1]+coordinate2[1])/2
+	return (midlat, midlong)
+
+#Can add more data to coordinate tuple.  The first two values are lat,long.
+#Example: (lat, long, imageID)
+def geoAnalyze(coordinates):
+	minlat=coordinates[0][0]
+	minlong=coordinates[0][1]
+	maxlat=coordinates[0][0]
+	maxlong=coordinates[0][1]
+	avglat=0
+	avglong=0
+	size=len(coordinates)
+	for coordinate in coordinates:
+		if coordinate[0]>maxlat:
+			maxlat=coordinate[0]
+		if coordinate[0]<minlat:
+			minlate=coordinate[0]
+		if coordinate[1]>maxlong:
+			maxlong=coordinate[1]
+		if coordinate[1]<minlong:
+			minlong=coordinate[1]
+		avglat=avglat+coordinate[0]
+		avglong=avglong+coordinate[1]
+
+	avglat=avglat/size
+	avglong=avglong/size
+	minpoint=(minlat, minlong)
+	maxpoint=(maxlat, maxlong)
+	radius=(calcDistance(minpoint, maxpoint))/2
+	center=calcMidpoint(minpoint, maxpoint)
+	return {'center': center, 'maxpoint': maxpoint, 'minpoint': minpoint, 'radius': radius,
+		'meanpoint': (avglat, avglong)}
+
+def geoCluster(coordinates, percentage):
+	analysis_dict=geoAnalyze(coordinates)
+	radius=analysis_dict['radius']
+	cluster_dist=percentage*radius
+	clusters=[]
+	analysis_dict['clusters']=clusters
+	for coordinate in coordinates:
+		flag=0
+		min_dist=cluster_dist
+		clusterRef={}
+		clusterRef['points']=[]
+		clusterRef['meanpoint']=(0, 0)
+		for cluster in clusters:
+			dist=calcDistance(coordinate, cluster['meanpoint'])
+			if dist<min_dist:
+				flag=1
+				min_dist=dist
+				clusterRef=cluster
+		clusterRef['points'].append(coordinate)
+		size=len(clusterRef['points'])
+		meanlat=(coordinate[0]/size)+(clusterRef['meanpoint'][0]*(size-1))/size
+		meanlong=(coordinate[1]/size)+(clusterRef['meanpoint'][1]*(size-1))/size
+		clusterRef['meanpoint']=(meanlat, meanlong)
+		if flag==0:
+			clusters.append(clusterRef)
+	return analysis_dict			
+				
+	
 def plotGeo(source):
 	import gmplot
 	gmap=gmplot.GoogleMapPlotter(35.6583, -83.5200, 13.8)
+
 	print('TOTAL: '+str(source.total))
-	import matplotlib.pyplot as plt
 	i=0
 	lats=[]
 	longs=[]
@@ -41,14 +107,14 @@ def plotGeo(source):
 		dict=eval(exif['Exif'][piexif.ExifIFD.UserComment])
 		location=dict['gps']
 		if location is not None:
-			#plt.plot([location[1]], [location[0]], 'ko')
+		#	plot.plot([location[1]], [location[0]], 'ko')
 			lats.append(location[0])
 			longs.append(location[1])
 			print(i)
 		i=i+1
-	gmap.heatmap(lats, longs, radius=50, threshold=40000, dissipating=True)
-	#gmap.scatter(lats, longs, 'ko', size=20, marker=False)
-	gmap.draw('/mnt/c/Users/emars/Desktop/ccLargeGeoHeatPlot.html')
+#	gmap.heatmap(lats, longs, radius=50, threshold=40000, dissipating=True)
+	gmap.scatter(lats, longs, 'ro', size=20, marker=False)
+	gmap.draw('/mnt/c/Users/emars/Desktop/ccLargeGeoPlot2.html')
 	#plt.show()	
 
 def geoTrend(pack):
@@ -132,7 +198,55 @@ def geoParse(source, num, geotrends, newPackage):
 		i=i+1
 	return list1
 
+def compareDate(date1, date2):
+	from data import dayParse
+	dayDiff=dayParse(date1)-dayParse(date2)
+	yearDiff=(date1[0]-date2[0])*365
+	totalDiff=yearDiff+dayDiff #Total difference, in days, of date1-date2
+	return totalDiff
 
+def dateSort(dates):
+	new_dates=[]
+	min_day=2030*365
+	inserted=0
+	length=len(dates)
+	i=0
+	date_dict={}
+	for date in dates:
+		if str(date) not in date_dict.keys():
+			date_dict[str(date)]=[]
+			date_dict[str(date)].append(i)
+		else:
+			date_dict[str(date)].append(i)
+		i=i+1
+	date_values=date_dict.keys()
+	used_values=[]
+	i=0
+	length=len(date_values)
+	while len(new_dates)<length:
+		min_day=2030*365
+		for value in date_values:
+			if int(value)<min_day and value not in used_values:
+				min_day=int(value)
+		new_dates.append((min_day, date_dict[str(min_day)]))
+		used_values.append(str(min_day))
+	return new_dates
+
+def dateAnalyze(dates):
+	import data
+	totals=[0]*365
+	min=9999999
+	max=-9999999
+	minDay=[]
+	maxDay=[]
+	for date in dates:
+		if date[0]<min:
+			min=date[0]
+		if date[0]>max:
+			max=date[0]
+		totals[date[0]%365]=len(dates[1])
+	return (totals, max, min, max-min)
+		
 					
 #The code below takes a user-specified package, sorts it, identifies geo trends based on rating, then creates a new package using targeted geo search in search.py		
 def modGeo(analysisPackage, sourcePackage, dir):

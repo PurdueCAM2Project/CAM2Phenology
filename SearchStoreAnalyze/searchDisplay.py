@@ -1,17 +1,24 @@
-#This is the UI to search, compile (make package), and rate images.  Using a search.py search() class to search and to interact with image packages (phenImage.py searchPackage())
+#This is the UI to search, compile (make package), and rate images.  Using a search.py search() class to search and to interact with image packages (storage.py searchPackage())
 #Currently only compatible with flickr API search
 #Global Phenology: Ehren Marschall, updated 3/7/17
 import tkinter  #Tkinter framework.  
 from tkinter import *
-#thoroughly uses phenImage.py and search.py
+#thoroughly uses storage.py and search.py
 import search
 from search import *
 from PIL import Image, ImageTk
-from phenImage import searchPackage
+from storage import searchPackage
 import matplotlib
 
+if not os.path.isfile('preferences.txt'):
+	with open('preferences.txt', 'w+') as file:
+		lines=[]
+		lines.append('packages/')
+		file.writelines(lines)
+with open('preferences.txt', 'r') as file:
+	lines=file.readlines()
+	dir=lines[0]
 images=searchPackage()
-dir='packages/'
 addedTypes=[]
 addedParameters=[]
 top=tkinter.Tk()
@@ -63,21 +70,21 @@ def setQual(q):
 lQuality=Label(top, text='Quality').grid(row=26, column=5, sticky=W+E)
 quality= IntVar(top)
 quality.set(0)
-oQuality= OptionMenu(top, quality, 1, 2, 3, command=setQual)
+oQuality= OptionMenu(top, quality, 0, 1, 2, 3, command=setQual)
 oQuality.grid(row=27, column=5, sticky=W+E)
 def setScene(s):
 	rating[1]=s
 lScene=Label(top, text='Scene').grid(row=26, column=6, sticky=W+E)
 scene = IntVar(top)
 scene.set(0)
-oScene= OptionMenu(top, scene, 1, 2, 3, command=setScene)
+oScene= OptionMenu(top, scene, 0, 1, 2, 3, command=setScene)
 oScene.grid(row=27, column=6, sticky=W+E)
 def setScale(sc):
 	rating[2]=sc
 lScale=Label(top, text='Scale').grid(row=26, column=7, sticky=W+E)
 scale= IntVar(top)
 scale.set(0)
-oScale= OptionMenu(top, scale, 1, 2, 3, command=setScale)
+oScale= OptionMenu(top, scale, 0, 1, 2, 3, command=setScale)
 oScale.grid(row=27, column=7, sticky=W+E)
 def setCov(cov):
 	rating[3]=cov
@@ -141,7 +148,13 @@ def search(): #Search takes parameters from entries and matches them to their ty
 	del addedParameters[:]
 def setDir():
 	global dir
-	dir=E10.get()	
+	dir=E10.get()
+	with open("preferences.txt", 'r+') as file:
+		lines=file.readlines()
+	lines[0]=dir
+	with open('preferences.txt', 'w') as file:
+		file.writelines(lines)
+			
 def getPackage():
 	top2=Toplevel()
 	flickr.packageCreator(dir, images, top2)
@@ -153,13 +166,17 @@ def geoAnalyze():
 	if images.data['Rated']<(images.data['Total']-5):
 		print( "Rate more images before analyzing")
 	else:
+		sourcePackage=searchPackage()
+		sourcePackage.open('CCLargeGeo', dir)
+		print("Using CCLargeGeo as a source.  More options in future.\nUsing Flickr to do this is incredibly slow")
 		images.writedata()
-		modGeo(images, dir)
+		modGeo(images, sourcePackage, dir)
 		name=images.packageName+'I'
 		images.open(name, dir)
 
 def exit():
 	import sys
+	top.destroy()
 	sys.exit()
 
 #Module buttons  

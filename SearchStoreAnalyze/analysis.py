@@ -25,7 +25,7 @@ def sortDict(list, key):
 		return list		
 	
 
-#Takes a RATED AND SORTED searchPackage (phenImage.py) and finds the best geo locations in the search 
+#Takes a RATED AND SORTED searchPackage (storage.wpy) and finds the best geo locations in the search 
 #All geo locations are printed on a grid with color corresponding to value. 
 #TODO: put gps tags into exif so we don't have to query flickr for geo location
 def geoTrend(pack):
@@ -65,11 +65,52 @@ def geoTrend(pack):
 	#plt.show()
 	return geo
 
-	
-#The code below takes a user-specified package, sorts it, identifies geo trends based on rating, then creates a new package using targeted geo search in search.py		
-def modGeo(analysisPackage, dir):
+def geoParse(source, num, geotrends, newPackage):
+	from storage import searchPackage
+	def calcDistance(x1, x2, y1, y2):
+		import math
+		dist=math.sqrt((float(x2)-float(x1))**2+(float(y2)-float(y1))**2)
+		return dist
+	i=0
+	images=source.getImages(0, 30)
+	list1=[]
+	list2=[]
+	list3=[]
+	index=0
+	while len(images) >0:
+		for image in images:
+			if image[1]['gps'] is not None:
+				dist1=calcDistance(image[1]['gps'][0], geotrends[0]['lat'], image[1]['gps'][1], geotrends[0]['lon'])
+				dist2=calcDistance(image[1]['gps'][0], geotrends[1]['lat'], image[1]['gps'][1], geotrends[1]['lon'])
+				dist3=calcDistance(image[1]['gps'][0], geotrends[2]['lat'], image[1]['gps'][1], geotrends[2]['lon'])
+				if (dist1<dist2) and (dist1<dist3):
+					newPackage.add(image)
+					j=j+1
+					if i==num:
+						break
+				elif (dist2<dist1) and (dist2<dist3) and len(list2)+j<num:
+					list2.append(image)
+				elif len(list2)+len(list3)+j<num:
+					list3.append(image)
+		index=index+30
+		images=source.getImages(index, index+30)
+	t=0
+	if i<num and t<len(list2):
+		newPackage.add(list2[t])
+		t=t+1
+		i=i+1
 
-	from phenImage import searchPackage
+	t=0
+	if i<num and t<len(list3):
+		newPackage.add(list3[t])
+		t=t+1
+		i=i+1
+ 	return list1
+					
+#The code below takes a user-specified package, sorts it, identifies geo trends based on rating, then creates a new package using targeted geo search in search.py		
+def modGeo(analysisPackage, sourcePackage, dir):
+
+	from storage import searchPackage
 	from search import targetedGeoSearch
 	data=analysisPackage.data
 	print (data)
@@ -77,10 +118,11 @@ def modGeo(analysisPackage, dir):
 	data['Photos']=sortDict(photoRatings, 'Rating')
 	print ('SORTED')
 	print (data)
-	geotrends=geoTrend(analysisPackage)
+	geotrends=geoTrend(analysisPackage)	
 	print (geotrends)
-	imageList=targetedGeoSearch(data['Url'][0], geotrends, 5)
+#	imageList=targetedGeoSearch(data['Url'][0], geotrends, analysisPackage.data['Total'])
 	targetGeo=searchPackage()
-	targetGeo.create(analysisPackage.packageName+'I', len(imageList), data['Url'], imageList, dir)
+	targetGeo.create(analysisPackage.packageName+'I', data['Url'],  dir)
+	geoParse(sourcePackage, analysisPackage.data['Total'], geotrends, targetGeo)  
 	targetGeo.writedata()
 	print (imageList)
