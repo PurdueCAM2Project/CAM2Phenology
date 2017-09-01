@@ -22,12 +22,12 @@ create table clusters
 	num_images int
 );
 
-create table images 
+create table images
 (
 	id BIGINT not null,
 	source varchar(10) not null,
 	primary key(id, source),
-	region char(25) null,
+	region varchar(25),
 	foreign key(region)
 		references regions(name),
 	date_taken int not null,
@@ -40,6 +40,9 @@ create table images
 	cluster_id int,
 	foreign key (cluster_id)
 		references clusters(id),
-	alt_id BIGINT
+	alt_id BIGINT,
+	notes varchar(500) default null
 
 );
+
+INSERT INTO regions (name) values ("Smoky Mountains");

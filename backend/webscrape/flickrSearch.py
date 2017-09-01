@@ -31,7 +31,7 @@ def getJSON(url):
 
 def search(types, parameters):
 	ids=[]
-	url=mUrl+'search&api_key='+key+'&per_page=5000&format=json&nojsoncallback=1'
+	url=mUrl+'search&api_key='+key+'&per_page=500&format=json&nojsoncallback=1'
 	i=0
 	while (i<len(types)): #formatting parameter
 		parameter=parameters[i]
@@ -40,6 +40,7 @@ def search(types, parameters):
 		url=url+'&'+types[i]+'='+parameter
 		i=i+1
 	data=getJSON(url)
+	print(url)
 	print(data)
 	#print('Search Hits:'+data['photos']['total'])
 	total=data['photos']['total']
@@ -58,7 +59,7 @@ def search(types, parameters):
 	#print('Search Complete')
 	return (ids, total)
 
-def getInfo(id):
+def getInfo(id): #getting url to send to html parser for parsing (not jpeg url.)
 	url=mUrl+'getInfo&api_key='+key+'&format=json&nojsoncallback=1&photo_id='+str(id)
 	data=getJSON(url)
 	return data
@@ -99,15 +100,18 @@ def getImageDict(id):
 	if data is not None:
 		urls=data['photo']['urls']
 		geo=getGeo(id)
-		pic=htmlParser.htmlParse(urls['url'][0]['_content'])      #grabbing image jpeg link.  Only grabbing photos with dates.
+		pic=htmlParser.htmlParse(urls['url'][0]['_content'])  #grabbing image jpeg link and date_taken.  Only grabbing photos with dates.
 		if pic is not None:
 			date=pic[1]
 			dayint=0
 			dayint=dayint+int(date[0])*10000 + int(date[1])*100 + int(date[2])
 			image_dict={'id': id, 'url': pic[0], 'date_taken': dayint, 'gps': geo, 'source': 'flickr'}
+			#I am inserting redundant latitude/longitude values for the UrlIterator class. (08/31/17)
+			image_dict['latitude']=geo[0]
+			image_dict['longitude']=geo[1]
 			return image_dict
 	#print('fail')
-	return 'fail' #<--If parser fails to find a date
+	return None #<--If parser fails to find a date
 
 def getImageTup(id, dir):
 	imageDict=getImageDict(id)

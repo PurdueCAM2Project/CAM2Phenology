@@ -4,16 +4,14 @@ import os
 import os.path
 import json
 import datetime
-sys.path.insert(0, '/mnt/d/PhenologyGit/backend/utility')
 from PIL import Image
 import imagehash
 import dbManager
-import data
-#import data
-
 	
 
 class ImageStorage():
+#This is a prototype for an image server
+#This class receives requests relating to image storage and services them
 
 	id=0
 	depth=0
@@ -21,7 +19,7 @@ class ImageStorage():
 	def __init__(self, num_images=1000000):
 		import atexit
 		self.request_functions={'download': self.downloadStore, 'detect horizon': self.horizonDetect}
-		if os.path.isfile('ids.txt'):
+		if os.path.isfile('ids.txt'): #if this is cleared then the storage_tables need to be reset
 			with open('ids.txt', 'r') as file:
 				lines=file.readlines()
 				self.id=int(lines[0])
@@ -29,12 +27,11 @@ class ImageStorage():
 			file.close()
 		else:
 			self.buildFileTree(num_images)
-		if not os.path.isfile('requests.json'):
-			print('making file')
-			with open('requests.json', 'w+') as file:
-				data={'requests': [], 'serviced requests': []}
-				json.dump(data, file)
-			file.close()
+		print('making file')
+		with open('requests.json', 'w+') as file: 
+			data={'requests': [], 'serviced requests': []}
+			json.dump(data, file)
+		file.close()
 		atexit.register(self.exitHandler)
 		
 	#building a directory structure to hold 1000 images in a single folder, with 10 sub-directories per directory
@@ -91,6 +88,7 @@ class ImageStorage():
 		
 				
 	def downloadStore(self, image_dict, id):
+	#presently this is the only function used to download and save jpegs
 	#download and store an image sourced from <d_url>.  Stored based on the value of <id>
 	#TODO: create exif process to attach exif data in <image_dict>	
 		import urllib.request
@@ -133,6 +131,7 @@ class ImageStorage():
 		return Image.open(path)
 		
 	def horizonDetect(self, image_dict, id):
+	#calling horizon detection function and saving mask
 		import horizonDetection
 		from horizonDetection import findHorizon
 		path=self.buildPath(image_dict['alt_id'])

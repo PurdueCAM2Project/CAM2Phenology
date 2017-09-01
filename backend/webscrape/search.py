@@ -40,11 +40,29 @@ class WebSearch:
 	I am unsure of the best way to integrate this until we are working with more apis.
 	For now it is only set up for flickr.
 	"""
+		
 		search=flickrSearch.search(types, parameters)
 		self.total=self.total+int(search[1])
 		self.flickr_ids=search[0]
 		print('Total Search Hits: '+str(self.total))
 		
+	def sampleSearch(self, num_images=12):
+		metadata=[]
+		import random
+		random.shuffle(self.flickr_ids)
+		i=0
+		j=0
+		while (i<num_images):
+			image_data=self.getSearchData(j)
+			if image_data is not None:
+				image_data=(self.getSearchData(j))
+				metadata.append(image_data)
+				print(image_data)
+				i+=1
+			j+=1
+				
+		print("Sample Complete")				
+		return metadata
 		
 	def getSearchData(self, index):
 		image_dict=flickrSearch.getImageDict(self.flickr_ids[index])
