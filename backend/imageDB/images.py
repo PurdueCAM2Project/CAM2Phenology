@@ -21,7 +21,6 @@ def buildFileTree(num_images):
 			os.makedirs(path, exist_ok=True)
 	print ("Tree Built")
 	
-	
 #hashing integer <num> value into a file path	
 def buildPath(num):
 	hash_num=num
