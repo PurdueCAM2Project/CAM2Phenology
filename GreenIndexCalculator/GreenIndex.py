@@ -23,26 +23,32 @@ def ParseImages():
         numGraphs = len(xRegionData)
     else:
         plotData[0] = [] #precreate point list
-    for filename in os.listdir("."):
-        if filename.endswith(".jpg"):
+    fileList = [os.path.join("D:\\Phenology_Images\\2009\\Jun", filename) for filename in os.listdir("D:\\Phenology_Images\\2009\\Jun")] \
+            + [os.path.join("D:\\Phenology_Images\\2009\\Nov", filename) for filename in os.listdir("D:\\Phenology_Images\\2009\\Nov")]
+    for filename in fileList:
+        if filename.endswith(".jpg") or filename.endswith(".JPG"):
             exifData = piexif.load(filename)
-            analysisArray = None
-            if not len(xRegionData): #No regions specified, so process entire image
-                analysisArray = misc.imread(filename)
-                plotData[0].append([datetime.strptime(exifData.get("Exif").get(36867), "%Y:%m:%d"),
-                                 CalculateGreenIndex(analysisArray)])
-            else:
-                for counter in range(0, len(xRegionData)):
+            date = datetime.strptime(exifData.get("Exif").get(36867), "%Y:%m:%d %H:%M:%S")
+            if not (date.hour < 7 or date.hour > 19): #Time mux for nps dataset
+                print(filename)
+                analysisArray = None
+                if not len(xRegionData): #No regions specified, so process entire image
                     analysisArray = misc.imread(filename)
-                    analysisArray = analysisArray[int(xRegionData[counter][0]) : int(xRegionData[counter][1]) + 1, int(yRegionData[counter][0]) : int(yRegionData[counter][1]) + 1, :]
-                    #Image.fromarray(analysisArray, 'RGB').show()
-                    if counter in plotData.keys():
-                        plotData[counter].append([datetime.strptime(exifData.get("Exif").get(36867), "%Y:%m:%d"),
-                         CalculateGreenIndex(analysisArray)])
-                    else: #First time a region is being processed
-                        plotData[counter] = [[datetime.strptime(exifData.get("Exif").get(36867), "%Y:%m:%d"),
-                             CalculateGreenIndex(analysisArray)]]
-    print(plotData)
+                    greenIndex = CalculateGreenIndex(analysisArray)
+                    if greenIndex != -1:
+                        plotData[0].append([date, greenIndex])
+                else:
+                    for counter in range(0, len(xRegionData)):
+                        analysisArray = misc.imread(filename)
+                        analysisArray = analysisArray[int(xRegionData[counter][0]) : int(xRegionData[counter][1]) + 1, int(yRegionData[counter][0]) : int(yRegionData[counter][1]) + 1, :]
+                        #Image.fromarray(analysisArray, 'RGB').show()
+                        greenIndex = CalculateGreenIndex(analysisArray)
+                        if greenIndex != -1:
+                            if counter in plotData.keys():
+                                plotData[counter].append([date, greenIndex])
+                            else: #First time a region is being processed
+                                plotData[counter] = [[date, greenIndex]]
+    #print(plotData)
     if not len(xRegionData): #For labeling when no regions are selected
         xRegionData = [[0, analysisArray.shape[0]]]
         yRegionData = [[0, analysisArray.shape[1]]]
@@ -50,7 +56,10 @@ def ParseImages():
         PlotGreenIndex([item[0] for item in pointDataSet], [item[1] for item in pointDataSet], xRegionData[pointSet], yRegionData[pointSet])
 
 def CalculateGreenIndex(imageArray):
-    return float(sum(imageArray[:,:,1])) / float(sum(imageArray)) #Greenness index: G / (R + G + B)
+    RGB = float(sum(imageArray))
+    if RGB == 0:
+        return -1
+    return float(sum(imageArray[:,:,1])) / RGB #Greenness index: G / (R + G + B)
 
 def PlotGreenIndex(timeList, greenList, xPoints, yPoints):
     pyplot.scatter(timeList, greenList)
