@@ -1,10 +1,12 @@
 from scipy import misc
-from matplotlib import pyplot
+from matplotlib import pylab
 import os
-from numpy import sum
+from numpy import sum, polyfit, poly1d
 import piexif
 from datetime import datetime
+import time
 import sys
+import mpldatacursor
 from PIL import Image
 
 
@@ -23,13 +25,30 @@ def ParseImages():
         numGraphs = len(xRegionData)
     else:
         plotData[0] = [] #precreate point list
-    fileList = [os.path.join("D:\\Phenology_Images\\2009\\Jun", filename) for filename in os.listdir("D:\\Phenology_Images\\2009\\Jun")] \
-            + [os.path.join("D:\\Phenology_Images\\2009\\Nov", filename) for filename in os.listdir("D:\\Phenology_Images\\2009\\Nov")]
+
+    fileList = []
+    pathList = []
+
+    for (filename) in os.walk("D:\\Phenology_Images\\"):
+        if len(filename[2]) != 0:
+            pathList += [filename]
+
+    for dirList in pathList:
+        for filename in dirList[2]:
+            if "1200.jpg" in filename:
+                fileList += [dirList[0] + "\\" + filename]
+    #fileList = [os.path.join("D:\\Phenology_Images\\2009\\Jun", filename) for filename in os.listdir("D:\\Phenology_Images\\2009\\Jun")] \
+    #        + [os.path.join("D:\\Phenology_Images\\2009\\Nov", filename) for filename in os.listdir("D:\\Phenology_Images\\2009\\Nov")]
+
+    #for fileTup in os.walk("C:\Users\Achinthya\Desktop\Projects\\vipphenology\GreenIndexCalculator\Summer_vs_Fall"):
+    #    for filename in fileTup[2]:
+    #        fileList += ["Summer_vs_Fall\\" + filename]
+
     for filename in fileList:
         if filename.endswith(".jpg") or filename.endswith(".JPG"):
             exifData = piexif.load(filename)
             date = datetime.strptime(exifData.get("Exif").get(36867), "%Y:%m:%d %H:%M:%S")
-            if not (date.hour < 7 or date.hour > 19): #Time mux for nps dataset
+            if not (date.hour < 9 or date.hour > 17): #Time mux for nps dataset
                 print(filename)
                 analysisArray = None
                 if not len(xRegionData): #No regions specified, so process entire image
@@ -40,7 +59,8 @@ def ParseImages():
                 else:
                     for counter in range(0, len(xRegionData)):
                         analysisArray = misc.imread(filename)
-                        analysisArray = analysisArray[int(xRegionData[counter][0]) : int(xRegionData[counter][1]) + 1, int(yRegionData[counter][0]) : int(yRegionData[counter][1]) + 1, :]
+                        analysisArray = analysisArray[int(xRegionData[counter][0]) : int(xRegionData[counter][1]) + 1,
+                                                      int(yRegionData[counter][0]) : int(yRegionData[counter][1]) + 1, :]
                         #Image.fromarray(analysisArray, 'RGB').show()
                         greenIndex = CalculateGreenIndex(analysisArray)
                         if greenIndex != -1:
@@ -53,7 +73,10 @@ def ParseImages():
         xRegionData = [[0, analysisArray.shape[0]]]
         yRegionData = [[0, analysisArray.shape[1]]]
     for pointSet, pointDataSet in plotData.iteritems():
-        PlotGreenIndex([item[0] for item in pointDataSet], [item[1] for item in pointDataSet], xRegionData[pointSet], yRegionData[pointSet])
+        PlotGreenIndex([item[0] for item in pointDataSet],
+                       [item[1] for item in pointDataSet],
+                       xRegionData[pointSet],
+                       yRegionData[pointSet])
 
 def CalculateGreenIndex(imageArray):
     RGB = float(sum(imageArray))
@@ -62,11 +85,18 @@ def CalculateGreenIndex(imageArray):
     return float(sum(imageArray[:,:,1])) / RGB #Greenness index: G / (R + G + B)
 
 def PlotGreenIndex(timeList, greenList, xPoints, yPoints):
-    pyplot.scatter(timeList, greenList)
-    pyplot.title(str(xPoints) + " " + str(yPoints))
-    pyplot.ylabel("Greenness Index")
-    pyplot.xlabel("Date of Picture")
-    pyplot.show()
-
+    pylab.figure()
+    pylab.scatter(timeList, greenList)
+    pylab.title(str(xPoints) + " " + str(yPoints))
+    pylab.ylabel("Greenness Index")
+    pylab.xlabel("Date of Picture")
+    timeLabels = []
+    for timeStamp in timeList:
+        timeLabels += [int(time.mktime(timeStamp.timetuple()))]
+    z = polyfit(timeLabels, greenList, 10)
+    p = poly1d(z)
+    pylab.plot(timeList, p(timeLabels), "r--")
+    mpldatacursor.datacursor()
+    pylab.show()
 
 ParseImages()
