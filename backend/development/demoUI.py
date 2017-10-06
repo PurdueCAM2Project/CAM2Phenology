@@ -10,7 +10,7 @@ INSTRUCTIONS ON HOW TO RUN:
 -Beware of bugs. Try to follow the code when using the ui. It is not user friendly
 -you cant filter images until you have images to filter in your database
 -Give search functions time
--All images will be labelebed with region name "Smoky Mountains" by default at this point
+-All images will be labeled with region name "Smoky Mountains" by default at this point
 -Google map will be stored as 'plots/temp.html'.  Open in web browser and refresh after every action to see how map changes
 """
 import tkinter 
@@ -18,6 +18,7 @@ from tkinter import *
 from PIL import Image, ImageTk
 import storageUtil
 import urlViewer
+import sys
 
 root=tkinter.Tk()
 
@@ -47,6 +48,8 @@ clear=Button(root, text='clear', width=10, command=storageUtil.clearAll)
 sample_search=Button(root, text='Sample Search', width=10, command=storageUtil.loadSearchSample)
 commit_search=Button(root, text='Commit Search', width=10, command= lambda: storageUtil.commitSearch(region.get()))
 plot_circle=Button(root, text='Plot Circle', width=10, command= lambda: storageUtil.addCircle(float(latitude.get()), float(longitude.get()), float(radius.get())))
+resume=Button(root, text="Resume Commit", width=10, command=storageUtil.threader.resumeCommit)
+exit=Button(root, text='exit', width=10, command=sys.exit)
 #-----------------------
 
 # --Grid--
@@ -70,6 +73,8 @@ search.grid(row=4, column=0)
 sample_search.grid(row=5, column=0)
 commit_search.grid(row=6, column=0)
 clear.grid(row=7, column=0)
+resume.grid(row=8, column=0)
+exit.grid(row=9, column=0)
 #------------------------------
 
 #launching urlViewer in the same window

@@ -41,7 +41,7 @@ def search(types, parameters):
 		i=i+1
 	data=getJSON(url)
 	print(url)
-	print(data)
+	#print(data)
 	#print('Search Hits:'+data['photos']['total'])
 	total=data['photos']['total']
 	done=0
@@ -54,7 +54,7 @@ def search(types, parameters):
 			done=1
 		else:
 			page=page+1
-			#print("Grabbing Page" +str(page))
+			print("Grabbing Page" +str(page))
 			data=getJSON(url+'&page='+str(page))
 	#print('Search Complete')
 	return (ids, total)
