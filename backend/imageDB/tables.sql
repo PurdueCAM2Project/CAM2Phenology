@@ -1,19 +1,26 @@
 
 drop table if exists tag_links;
 drop table if exists permissions;
-drop table if exists users;
 drop table if exists tags;
 drop table if exists images;
 drop table if exists project_data;
 drop table if exists projects;
 drop table if exists datasets;
+drop table if exists users;
 
+create table users
+(
+	id bigint not null primary key auto_increment,
+	user_name varchar(20) not null,
+	time_added timestamp default current_timestamp
+);
 
 create table datasets
 (
 	id bigint not null primary key auto_increment,
+	user_id bigint not null,
+	foreign key(user_id) references users(id),
 	name varchar(50) not null unique key
-
 );
 
 create table projects
@@ -45,23 +52,18 @@ create table images
 	dataset_id bigint not null,
 	foreign key(dataset_id) references datasets(id),
 	imagehash varchar(25) not null,
-	unique key(imagehash, dataset_id),
+	date_taken datetime,
+	unique key(imagehash, dataset_id, date_taken),
 	url varchar(2083),
 	source varchar(50),
 	x_resolution int,
 	y_resolution int,
-	date_taken datetime,
 	index (date_taken),
 	gps point,
 	notes varchar(500)
 );
 
-create table users
-(
-	id bigint not null primary key auto_increment,
-	user_name varchar(20) not null,
-	time_added timestamp default current_timestamp
-);
+
 
 create table permissions
 (
@@ -87,13 +89,16 @@ create table tag_links
 
 );
 
-insert into datasets (name) values("test1");
-insert into datasets (name) values ('test2');
+insert into users(user_name) values("Ehren Phenology");
 insert into users(user_name) values("test user1");
 insert into users(user_name) values("test user2");
 insert into users(user_name) values("test user3");
 insert into users(user_name) values("test user4");
-insert into permissions(user_id, dataset_id) values(1, 1);
+insert into datasets (name, user_id) values("test1", 1);
+insert into datasets (name, user_id) values('test2', 1);
+
+
+/*insert into permissions(user_id, dataset_id) values(1, 1);*/
 
 	
 	
