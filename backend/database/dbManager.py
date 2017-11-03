@@ -9,7 +9,8 @@ timestamp=datetime.today()
 
 #Will initialize and connect on import
 
-print("Using MySQL server @ 128.46.213.21")
+mysql_host='128.46.213.21'
+print("Using MySQL server @ "+mysql_host)
 
 if not os.path.exists('preferences.json'):
 	import db_setup
@@ -21,7 +22,7 @@ file.close
 print("Using database "+pref['database']+", with user name: "+pref['user name'])	
 
 pswd=getpass.getpass("Input password:")
-connection=pymysql.connect(host='localhost', #hpvision has address '128.46.213.21. testing on localhost'
+connection=pymysql.connect(host=mysql_host, #hpvision has address '128.46.213.21. testing on localhost'
 			user=pref['user name'],
 			password=pswd,
 			db=pref['database'],
