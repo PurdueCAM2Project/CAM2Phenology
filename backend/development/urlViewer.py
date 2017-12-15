@@ -2,9 +2,9 @@
 import tkinter
 from tkinter import *
 from PIL import Image, ImageTk
-import storageUtil
+#import storageUtil
 
-class MetaIterator:
+class MetaIterator():
 #Class used for iterating through, and performing functions on images based on their url and metadata
 #This class has been used for two seperate UIs hence the messy imports
 	images=[]	
@@ -77,6 +77,13 @@ class MetaIterator:
 		source=self.images[self.index]['source']
 		storageUtil.horizonRequest(id, source) #sending horizon detection request to ImageStorage
 	
+	def rateImage(self, rating):
+	#update useability column in database (see dbManager)
+		import dbManager
+		id=self.images[self.index]['id']
+		source=self.images[self.index]['source']
+		dbManager.updateImageRating(id, source, rating)
+	
 	def noteImage(self, note): #inserting a note into database
 		import dbManager
 		id=self.images[self.index]['id']
@@ -88,7 +95,7 @@ class MetaIterator:
 
 def display(iterator, root=None, sub_window=False, row_offset=0, column_offset=0 ):						
 #Class used to display images from url viewer
-#this can be launched independently as well as in another window (default is independent)
+#this can be launched independently as well as in another window (default is independent, ie sub_window=False)
 
 	if root is None:
 		root=tkinter.Tk()
@@ -100,6 +107,16 @@ def display(iterator, root=None, sub_window=False, row_offset=0, column_offset=0
 		canvas.image=tkim
 		canvas.create_image(0, 0, image=canvas.image, anchor='nw')
 		
+	def timeSlider(images):
+		#Display the images in <images[i][0]> while displaying data in <images[i][1]> in 1 second intervals
+		import time
+		
+		for im in images:
+			configureDisplay(im[0])
+			print(str(im[1]))
+			time.sleep(1)
+			
+		
 	def displayNext():
 		im=iterator.next()
 		configureDisplay(im)
@@ -108,30 +125,42 @@ def display(iterator, root=None, sub_window=False, row_offset=0, column_offset=0
 		im=iterator.previous()
 		configureDisplay(im)
 	
-		
 	
-	canvas=Canvas(root, width=960, height=540)
-
+	canvas=Canvas(root, width=960, height=540) #Where image is displayed
 	canvas.configure(background='blue')
 	
 	note_entry=Text(root, width=50, height=20)
 	
+	#---BUTTONS-------------------------------------
 	next=Button(root, text='Next', width=5, command=displayNext)
 	previous=Button(root, text='Previous', width=5, command=displayPrevious)
-	store=Button(root, text='Store Image', width=8, command=iterator.store)
-	detectHorizon=Button(root, text='Horizon Detection', width=10, command=iterator.horizonFunc)
 	add_note=Button(root, text='Add Note', width=10, command= lambda : iterator.noteImage(note_entry.get('1.0', '500.0')))
-	
+	useable=Button(root, text='USEABLE', width=10, command= lambda : iterator.rateImage(1)) #--> Image is useable
+	not_useable=Button(root, text='NOT USEABLE', width=10, command= lambda : iterator.rateImage(-1)) #--> Image is not useable
+	"""store=Button(root, text='Store Image', width=8, command=iterator.store)
+	detectHorizon=Button(root, text='Horizon Detection', width=10, command=iterator.horizonFunc)"""
+	#------------------------------------------------
+
+	#----PLACING WIDGETS ONTO GRID------------
 	canvas.grid(row=0+row_offset, column=1+column_offset, rowspan=15, columnspan=15)
+
+	note_entry.grid(row=18+row_offset, column=10+column_offset)
+	
 	next.grid(row=16+row_offset, column=15+column_offset)
 	previous.grid(row=16+row_offset, column=5+column_offset)
-	store.grid(row=16+row_offset, column=10+column_offset)
-	detectHorizon.grid(row=17+row_offset, column=10+column_offset)
-	note_entry.grid(row=18+row_offset, column=10+column_offset)
-	add_note.grid(row=18, column=11+column_offset)
+	useable.grid(row=16+row_offset, column=10+column_offset)
+	not_useable.grid(row=16+row_offset, column=9+column_offset)
+	add_note.grid(row=18+row_offset, column=11+column_offset)
+	"""store.grid(row=16+row_offset, column=10+column_offset)
+	detectHorizon.grid(row=17+row_offset, column=10+column_offset)"""
+	#-------------------------------------------
 	
 	if not sub_window:
 		root.mainloop()
+		
+if __name__=='__main__':
+	import storageUtil
+	display(storageUtil.iterator)
 
 
 

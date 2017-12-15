@@ -22,14 +22,14 @@ Runs 'functionalityTest()' when run as main.
 """
 
 
-db_name="ImageDBTest"
+db_name="ImageDB"
 #Testing should be done on this database (mostly). Alternatively, connect to 'ImageDB'
 if(len(sys.argv)>1):
 	db_name=sys.argv[1]
 print("Using database "+str(db_name))
 #NOTE: insert your own username
 password=getpass.getpass("Using login info: "+imagedb.login_info+"\nPASSWORD: ")
-idb=ImageDB('Ehren-phenology', password, db_name=db_name) #Connecting to imageDB database and sftp server.
+idb=ImageDB('test user1', password, db_name=db_name) #Connecting to imageDB database and sftp server.
 
 def download(url, path=''):
 #unimportant download function
@@ -203,7 +203,7 @@ class FTPTransfer:
 		if limit is None:
 			limit=len(data)
 		print('Adding '+str(limit)+' images to image database')
-		for i in range(15700, limit):
+		for i in range(33800, limit):
 			if (i%100==0):
 				print(str(i)+" images added")
 			path=data[i]
@@ -211,7 +211,6 @@ class FTPTransfer:
 			date_taken=FTPTransfer.dateFromGRSM(path.split('/')[6])
 			FTPTransfer.download(url+path)
 			idb.addImage("FTPtemp.jpg", dataset_name="GRSM", image_dict={"date_taken": date_taken, 'source': 'NPS'}) #Good example of adding an image from a local file name
-			
 		ftp.close()
 	
 	

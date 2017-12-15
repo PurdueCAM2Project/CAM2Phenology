@@ -29,6 +29,9 @@ def htmlParse(url):
 		except HTTPError as e:
 			print('HTTP Error')
 			return None
+		except Exception as e:
+			print(e.message)
+			return None
 		else:
 			html=response.read()
 			break
@@ -39,13 +42,14 @@ def htmlParse(url):
 	#doc.write(html)
 	soup = BeautifulSoup(html, 'html.parser')
 	imageLink = soup.find("meta", property="og:image")
-	date = soup.find("span", class_ = "date-taken-label")
+	#date = soup.find("span", class_ = "date-taken-label")
 	#print(imageLink['content'])
 	#print(str(date.contents[0]))
-	dateString = r'Taken on (\w+) (\d+), (\d+)\n\t\t'
-	date = re.search(dateString, str(date.contents[0]))
+	#dateString = r'Taken on (\w+) (\d+), (\d+)\n\t\t'
+	#date = re.search(dateString, str(date.contents[0]))
 	#print (monthDict[date.group(1)])
-	if date is not None:
-		return [imageLink['content'], [date.group(3), monthDict[date.group(1)], date.group(2)]]
+	if imageLink  is not None:
+		return imageLink['content']
+		#return [imageLink['content'], [date.group(3), monthDict[date.group(1)], date.group(2)]]
 
 
