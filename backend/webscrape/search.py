@@ -41,9 +41,12 @@ class WebSearch:
 	For now it is only set up for flickr.
 	"""	
 		search=flickrSearch.search(types, parameters)
-		self.total=self.total+int(search[1])
-		self.flickr_ids.extend(search[0])
-		print('Total Search Hits: '+str(self.total))
+		for id in search[0]:
+			if id not in self.flickr_ids:
+				self.flickr_ids.append(id)
+		print('Total Unique Search Hits: '+str(len(self.flickr_ids)-self.total))
+		self.total=len(self.flickr_ids)
+		print('Total ids: '+str(self.total))
 		
 	def sampleSearch(self, num_images=12):
 		metadata=[]

@@ -14,8 +14,9 @@ create table regions
 
 create table clusters
 (
-	id int not null primary key,
+	id bigint not null primary key autoincrement,
 	gps POINT not null,
+	radius float(12, 9),
 	region_name char(25) not null,
 	foreign key (region_name)
 		references regions(name),
@@ -30,7 +31,7 @@ create table images
 	region varchar(25),
 	foreign key(region)
 		references regions(name),
-	date_taken int not null,
+	date_taken datetime not null,
 	index (date_taken),
 	date_retrieved datetime,
 	gps POINT,
@@ -41,6 +42,9 @@ create table images
 	foreign key (cluster_id)
 		references clusters(id),
 	alt_id BIGINT,
+	userid varchar(20),
+	haspeople int default 0,
+	useable int default 0,
 	notes varchar(500) default null
 
 );

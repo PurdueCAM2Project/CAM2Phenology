@@ -3,9 +3,9 @@ import urllib.request
 import re
 from urllib.error import URLError, HTTPError
 
-def htmlParse(url):
+def htmlParse(html):
 
-	monthDict = {'January': 1,
+	"""monthDict = {'January': 1,
  		'February': 2,
 		 'March': 3,
 		 'April': 4,
@@ -37,7 +37,7 @@ def htmlParse(url):
 			break
 	if(i==5):
 		print("Check connection")
-		return None
+		return None"""
 	#doc = open('test.txt', 'wb')
 	#doc.write(html)
 	soup = BeautifulSoup(html, 'html.parser')
