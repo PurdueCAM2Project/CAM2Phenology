@@ -52,8 +52,8 @@ def searchIds(params):
 		data=json.loads(getResponse(searchurl+'&page='+str(page)).decode())
 		for photo in data['photos']['photo']:
 			ids.append(photo['id'])
-	print(total)
-	print(str(len(ids)))
+	#print(total)
+	#print(str(len(ids)))
 	return ids
 	
 

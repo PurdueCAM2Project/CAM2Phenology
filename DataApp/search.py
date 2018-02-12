@@ -10,24 +10,24 @@ apis={'flickr': flickrsearch} #api modules
 def search(params):
 	#Using API services to search a given area
 	#params={paramname: param, ...}
-
 	#params={'lat': <latitude>, 'lon': <longitude>, 'radius': <radius>}
-	ids={}
+	ids=[]
 	for api in apis.keys():
-		ids[api]=apis[api].searchIds(params)
+		source_ids=apis[api].searchIds(params)
+		ids.extend([(source_ids[i], api) for i in range(0, len(source_ids))])
+	#print(str(ids))
 	return ids
 
 def compileData(ids):
-	#compiling metadata for given ids. ids={<api>: [ids], ...}
+	#compiling metadata for given ids. ids=[(idnum, source)....]
 	#Returning array of images' metadata ready to be committed to database
 	data=[] 
-	for api in ids.keys():
-		for id in ids[api]:
-			data.append(apis[api].processID(id))
-			#print(str(data[-1]))
+	for id in ids:
+		data.append(apis[id[1]].processID(id[0]))
+		#print(str(data[-1]))
 	return data
 	
-def compileData_thread(ids, numthreads=4):
+"""def compileData_thread(ids, numthreads=4):
 	#Using multiple threads to compile metadata.
 	#Significantly faster than single thread version
 	from multiprocessing import Process, Queue
@@ -55,11 +55,8 @@ def compileData_thread(ids, numthreads=4):
 	data=[]
 	while not resultq.empty():
 		data.append(resultq.get())
-	return data
+	return data"""
 
-		
-	
-	
 if __name__=='__main__':
 	ids=search({'lat': 35.6582, 'lon': -83.52, 'radius': 1})
 	print(str(len(ids)))

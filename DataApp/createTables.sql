@@ -45,9 +45,9 @@ create table images
 	region char(30),
 	foreign key (region)
 		references regions(name),
-	location_id bigint not null,
+	/*location_id bigint not null,
 	foreign key(location_id)
-		references locations(id),
+		references locations(id),*/
 	date_taken datetime not null,
 	index (date_taken),
 	date_retrieved timestamp default current_timestamp,
