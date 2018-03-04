@@ -1,6 +1,4 @@
 import tweepy as tw
-import html
-import json
 
 def authentication():
     keyFile = open('Consumer_Key.txt', 'r')
