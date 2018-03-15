@@ -5,10 +5,13 @@
 import os
 import database
 from database import DB
+import modeldata
 import json
 import search
 import datetime
 import utility as util
+
+filter=database.filter #filter parameters for general queries on images table
 
 if not os.path.isfile('preferences.txt'):
 	import setup
@@ -40,11 +43,10 @@ class MetadataList():
 	
 	def downloadImages(self, limit=None, path=default_image_path):
 		import random
-		
 		regions=db.getRegions()
 		for region in regions:
 			if not os.path.exists(path+region['name']):
-				os.makedirs(path+region['name'])
+				os.makedirs(path+region['name'].replace(' ', '_'))
 		random.shuffle(self.image_list) #might need optimizations if handling large lists (this can be done in constant time in sql)
 		if limit is None or int(limit)==len(self.image_list):
 			limit=len(self.image_list)
@@ -55,8 +57,16 @@ class MetadataList():
 			util.download(image_meta['url'], file_path)
 	
 	def getAttribute(self, attr_key):
+		#get one specific attribute from list of image dictionaries
 		attrList=[self.image_list[i][attr_key] for i in range(0, len(self.image_list))]
 		return attrList
+		
+	def plotPoints(self):
+		#plot data on google map
+		coordinates=[]
+		for meta in self.image_list:
+			coordinates.append((meta['latitude'], meta['longitude']))
+		modeldata.plotGoogleMap(coordinate_groups=[coordinates])
 		
 def scrapeArea(latitude, longitude, radius):
 	#searches area then commits images found to database
@@ -66,7 +76,7 @@ def scrapeArea(latitude, longitude, radius):
 	search_function=search.compileData #function to compile metadata form search apis
 	commit_function=db.addImages		#function to commit metadata to database
 	#multithreading. see utility.pipeData()
-	util.pipeData(ids, [search_function, commit_function], [3, 1], 20) 
+	util.pipeData(ids, [search_function, commit_function], [3, 1], 20)
 	
 def scrapeLocations(update_thresh=1): #update_thresh= the threshhold that determines when to update a location
 	locations=db.getLocations()
@@ -75,11 +85,12 @@ def scrapeLocations(update_thresh=1): #update_thresh= the threshhold that determ
 		if(location['last_updated'] is not None and (datetime.datetime.today()-location['last_updated']).days<update_thresh):
 			break
 		scrapeArea(location['latitude'], location['longitude'], location['radius'])
-	
-print(host)
-print(user)
-print(dbname)
-print(str(keys))
+		db.updateLocation(location['id'])
+		
+print("Connected to: "+host)
+print("User: "+user)
+print("Database: "+dbname)
+print("API Keys: "+str(keys))
 
 
 	

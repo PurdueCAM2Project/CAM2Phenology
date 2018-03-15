@@ -9,6 +9,7 @@ create table regions
 	name char(30) not null primary key,
 	num_images int,
 	mean_point POINT,
+	area POLYGON,
 	radius int
 );
 

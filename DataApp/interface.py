@@ -46,9 +46,7 @@ def addLocation():
 	if notes=="":
 		notes=None
 	core.db.addLocation(float(latitude), float(longitude), float(radius), notes=notes)
-	
 
-	
 def downloadData():
 	#downloads data loaded into <meta>
 	if not meta.image_list:
@@ -82,8 +80,26 @@ def loadQuery():
 	meta.image_list=core.db.query(sql)
 	print(str(len(meta.image_list))+" images loaded")
 	
+def loadImages():
+	#See db.getImages()
+	filter_params=[]
+	for attribute in core.filter.keys():
+		if attribute=='geo_range':
+			lat=input('latitude: ')
+			lon=input('longitude: ')
+			radius=input('radius: ')
+			if (radius!="" and lon!="" and lat!=""):
+				filter_params.append((attribute, [(float(lat), float(lon)), float(radius)]))
+		else:
+			value=input(attribute+": ")
+			if value!="":
+				filter_params.append((attribute, value))
+	meta.image_list=core.db.getImages(filter_params=filter_params)
+	print(str(len(meta.image_list))+" images loaded")
+	
+			
 parameters={'latitude': None, 'longitude': None, 'radius': None}
-functions={'q': queryDatabase, 'al': addLocation, 'ar': addRegion, 'ud': updateData, 'lr': loadRegion, 'lq': loadQuery, 'dd': downloadData, 'e': sys.exit}	
+functions={'q': queryDatabase, 'al': addLocation, 'ar': addRegion, 'ud': updateData, 'lr': loadRegion, 'li': loadImages, 'lq': loadQuery, 'pp': meta.plotPoints, 'dd': downloadData, 'e': sys.exit}	
 
 def showFunctions():
 	print("Possible Functions:")
@@ -91,9 +107,18 @@ def showFunctions():
 	
 if __name__=='__main__':
 	core.login(getpass.getpass("Input password: "))
+	print("Enter input function. Type 'h' to see possible commands.")
 	while True:
-		func=input("Enter Input Function (type 'h' to show possible functions):\nDataApp> ")
+		func=input("\nDataApp> ")
 		if func=='h':
 			showFunctions()
 		else:
-			functions[func]()
+			if (func in functions.keys()):
+				functions[func]()
+			else:
+				print("Error. Invalid Function")
+			
+			
+			
+			
+			

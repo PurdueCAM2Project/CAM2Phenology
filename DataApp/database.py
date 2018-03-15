@@ -3,7 +3,40 @@
 
 import pymysql.cursors
 import atexit
-import datetime		
+import datetime	
+
+filter={'min_date': 'date_taken>%s',
+		'max_date': 'date_taken<%s',
+		'year': 'YEAR(date_taken)=%s',
+		'month': 'MONTH(date_taken)=%s',
+		'day_of_year': 'DAYOFYEAR(date_taken)=%s',
+		'date_taken': 'date_taken=%s',
+		'region': 'images.region LIKE %s',
+		'geo_range': 'ST_WITHIN(images.gps, ST_BUFFER(POINT%s, %s))' 
+		}
+
+def makeFilter(params, union=False):
+	#constructing a sql 'WHERE' clause using the database schema and the params passed in
+	#this is for selecting from images table
+	#input: params=array of tuples of the form [(<param_key>, <value>),...]
+	#output: sql, [values]
+	#geo_range=[<(x, y)>, <radius>] 
+	
+	if (len(params))==0:
+		return "", []
+	sql="WHERE" #string used to execute query
+	values=[] #values order matches ordering of respective '%s' in sql string
+	condition=" "
+	for param in params:
+		sql=sql+condition+filter[param[0]]
+		if param[0]=='geo_range':
+			values.extend(param[1])
+		else:
+			values.append(param[1])
+		condition=' AND '
+		if union:
+			condition=' OR '
+	return sql, values
 	
 class DB():
 #Access and update database
@@ -18,7 +51,6 @@ class DB():
 			cursorclass=pymysql.cursors.DictCursor)					
 		self.cursor=self.connection.cursor()
 		atexit.register(self.connection.close)
-		self.filter="" #"WHERE" clause of sql query
 		
 	def query(self, sql, values=None):
 		if values is None:
@@ -27,15 +59,23 @@ class DB():
 			self.cursor.execute(sql, values)
 		self.connection.commit()
 		return self.cursor.fetchall()
-	
-	def addRegion(self, region_name, latitude, longitude, radius=None):
-		sql="INSERT IGNORE INTO regions (name, mean_point, radius) VALUES(%s, POINT%s, %s)"
+		
+	def addRegion(self, region_name, latitude, longitude,  polygon_points, radius=None):
+		polygon="POLYGON("
+		character='('
+		for point in polygon_points:
+			polygon=polygon+character+str(point[0])+' '+str(point[1])
+			character=', '
+		polygon=polygon+"))"
+		print (polygon)
+		sql="INSERT IGNORE INTO regions (name, mean_point, area, radius) VALUES(%s, POINT%s, ST_GeomFromText('"+str(polygon)+"'), %s)"
+		print(sql)
 		mean_point=(latitude, longitude)
 		self.query(sql, values=(region_name, mean_point, radius))
 		
 	def addLocation(self, latitude, longitude, radius, notes=None):
 		gps=(latitude, longitude)
-		sql="SELECT ST_DISTANCE(POINT%s, mean_point) as dist, name FROM regions ORDER BY dist DESC limit 1"
+		sql="SELECT ST_DISTANCE(POINT%s, mean_point) as dist, name FROM regions ORDER BY dist asc limit 1"
 		region=self.query(sql, values=(gps,))[0]['name']
 		sql="INSERT INTO locations(region, gps, radius, notes) VALUES(%s, POINT%s, %s, %s)"
 		self.query(sql, values=(region, gps, radius, notes))
@@ -57,8 +97,18 @@ class DB():
 		today=datetime.datetime.today()
 		sql="UPDATE locations SET last_updated=%s WHERE id=%s"
 		self.query(sql, values=(today, location_id))
-			
+	
 	#---Simple/Necessary Queries---
+	
+	def getImages(self, selection='*', filter_params=[], order_by='date_taken', limit='LIMIT 100000', union=False):
+		#returns images based on filter_params. See makeFilter()
+		#default arguments return (max)100000 images in database ordered by date_taken
+		where_clause, values=makeFilter(filter_params, union=union)
+		sql="SELECT "+selection+" FROM images "+where_clause+" ORDER BY "+order_by+" "+limit
+		values=tuple(values)
+		return self.query(sql, values=values)
+		
+		
 	def getLocations(self):
 		#returns array of all locations (as dictionaries)
 		return self.query("SELECT *, ST_X(gps) as latitude, ST_Y(gps) as longitude FROM locations ORDER BY last_updated")
@@ -67,6 +117,7 @@ class DB():
 		return self.query("SELECT *, ST_X(mean_point) as latitude, ST_Y(mean_point) as longitude FROM regions")
 		
 	def getRegion(self, region_name):
+		#returns images belonging to region <region_name>
 		return self.query("SELECT * FROM images WHERE region LIKE %s", values=(region_name,))
 	
 	def exists(self, table_name, column, column_value):
@@ -91,6 +142,8 @@ class DB():
 		for row in rows:
 			pruned_ids.append((row['id'], row['source']))
 		return pruned_ids
+		
+		
 
 """class SQL: #Class to format sql queries (unsure if this is needed yet)
 
@@ -126,5 +179,10 @@ class DB():
 		sql=" FROM "+table+" "+where_clause
 		return sql, values"""
 	
+if __name__=="__main__":
+	db=DB()
+	db.connect('localhost', 'root', "Phenology", "Wettfd2312")
+	#db.addRegion('test', '4.0', '5.0')
+	db.addRegion('test', 4.2, -23.5, [(0, 0), (10, 0), (0, 10), (0, 0)])
 	
 		
