@@ -13,8 +13,9 @@ def pipeData(start_data, functions,  numthreads, buffer_size=10):
 		processes=[]
 		def killProcesses():
 			for proc in reversed(processes):
-				proc.terminate()
-				print('terminated')
+				if proc.is_alive():
+					proc.terminate()
+					print('terminated')
 				
 		atexit.register(killProcesses)
 		
@@ -74,4 +75,11 @@ def download(url, file_path):
 		else:
 			return
 			
-			
+def getImage(image_dict):
+	from PIL import Image
+	try:
+		download(image_dict['url'], 'getimage.jpg')
+		return Image.open('getimage.jpg')
+	except Exception as e:
+		print("Error: "+e)			
+

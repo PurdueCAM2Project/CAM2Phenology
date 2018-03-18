@@ -1,8 +1,9 @@
+drop table if exists tag_links;
+drop table if exists tags;
 drop table if exists images;
 drop table if exists clusters;
 drop table if exists locations;
 drop table if exists regions;
-
 
 create table regions
 (
@@ -40,9 +41,10 @@ create table clusters
 
 create table images
 (
-	id BIGINT not null,
+	id bigint not null primary key auto_increment,
+	source_id BIGINT not null,
 	source varchar(10) not null,
-	primary key(id, source),
+	unique key(source_id, source),
 	region char(30),
 	foreign key (region)
 		references regions(name),
@@ -66,4 +68,21 @@ create table images
 	camera varchar(30) default null,
 	notes varchar(500) default null
 
+);
+
+
+create table tags
+(
+	id bigint not null primary key auto_increment,
+	tagname varchar(50) not null
+);
+
+create table tag_links
+(
+	tag_id bigint not null,
+	foreign key(tag_id) references tags(id),
+	image_id bigint not null,
+	foreign key(image_id) references images(id),
+	primary key(tag_id, image_id),
+	tag_data json
 );

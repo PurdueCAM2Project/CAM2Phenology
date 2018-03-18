@@ -1,11 +1,14 @@
 #master search class.  Inherits all API query functions.
 
 import flickrsearch
+import twittersearch
 import apirequest
 import time
 import json
 
 apis={'flickr': flickrsearch} #api modules
+if twittersearch.authenticated:
+	apis['twitter']=twittersearch
 
 def search(params):
 	#Using API services to search a given area
@@ -23,7 +26,9 @@ def compileData(ids):
 	#Returning array of images' metadata ready to be committed to database
 	data=[] 
 	for id in ids:
-		data.append(apis[id[1]].processID(id[0]))
+		image_data=apis[id[1]].processID(id[0])
+		if image_data != -1:
+			data.append(image_data)
 		#print(str(data[-1]))
 	return data
 	

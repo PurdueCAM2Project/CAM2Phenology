@@ -4,6 +4,7 @@
 import pymysql.cursors
 import atexit
 import datetime	
+import json
 
 filter={'min_date': 'date_taken>%s',
 		'max_date': 'date_taken<%s',
@@ -21,7 +22,6 @@ def makeFilter(params, union=False):
 	#input: params=array of tuples of the form [(<param_key>, <value>),...]
 	#output: sql, [values]
 	#geo_range=[<(x, y)>, <radius>] 
-	
 	if (len(params))==0:
 		return "", []
 	sql="WHERE" #string used to execute query
@@ -50,6 +50,7 @@ class DB():
 			db=dbname,
 			cursorclass=pymysql.cursors.DictCursor)					
 		self.cursor=self.connection.cursor()
+		self.tag_dict=self.getTags()
 		atexit.register(self.connection.close)
 		
 	def query(self, sql, values=None):
@@ -60,15 +61,15 @@ class DB():
 		self.connection.commit()
 		return self.cursor.fetchall()
 		
-	def addRegion(self, region_name, latitude, longitude,  polygon_points, radius=None):
-		polygon="POLYGON("
+	def addRegion(self, region_name, latitude, longitude, radius=None):
+		"""polygon="POLYGON("
 		character='('
 		for point in polygon_points:
 			polygon=polygon+character+str(point[0])+' '+str(point[1])
 			character=', '
-		polygon=polygon+"))"
-		print (polygon)
-		sql="INSERT IGNORE INTO regions (name, mean_point, area, radius) VALUES(%s, POINT%s, ST_GeomFromText('"+str(polygon)+"'), %s)"
+		polygon=polygon+"))
+		print (polygon)"""
+		sql="INSERT IGNORE INTO regions (name, mean_point, radius) VALUES(%s, POINT%s, %s)"
 		print(sql)
 		mean_point=(latitude, longitude)
 		self.query(sql, values=(region_name, mean_point, radius))
@@ -79,15 +80,16 @@ class DB():
 		region=self.query(sql, values=(gps,))[0]['name']
 		sql="INSERT INTO locations(region, gps, radius, notes) VALUES(%s, POINT%s, %s, %s)"
 		self.query(sql, values=(region, gps, radius, notes))
-		
+	
 	def addImage(self, id, source, date_taken, gps, latitude, longitude, userid=None, region=None, url=None, cluster_id=None, alt_id=None):
 		#print(str(gps))
 		if region is None:
 			sql="SELECT name FROM regions ORDER BY ST_DISTANCE(POINT%s, regions.mean_point) limit 1"
 			region=self.query(sql, values=(gps,))[0]['name']
-		sql="REPLACE INTO images (id, source, region, date_taken, gps,  latitude, longitude, userid, url, cluster_id, alt_id) VALUES (%s, %s, %s, %s, POINT%s, %s, %s, %s, %s, %s ,%s)"
+		sql="REPLACE INTO images (source_id, source, region, date_taken, gps,  latitude, longitude, userid, url, cluster_id, alt_id) VALUES (%s, %s, %s, %s, POINT%s, %s, %s, %s, %s, %s ,%s)"
 		self.query(sql, values=(id, source, region, date_taken, gps, latitude, longitude, userid, url, cluster_id, alt_id))	
-		
+		return 1
+
 	def addImages(self, image_dicts):
 		#adds array of image dictionaries to database
 		for image in image_dicts:
@@ -97,17 +99,50 @@ class DB():
 		today=datetime.datetime.today()
 		sql="UPDATE locations SET last_updated=%s WHERE id=%s"
 		self.query(sql, values=(today, location_id))
+
+	def createTag(self, tagname):
+		self.query("INSERT INTO tags (tagname) values (%s)", values=(tagname))
+		self.tag_dict=self.getTags()
+
+	def tagImage(self, image_id, tagname, tag_data):
+		if tag_name not in self.tag_dict.keys():
+			print("Error, tag does not exist.")
+			return 0
+		tag_id=self.tag_dict[tagname]
+		if tag_data is not None:
+			tag_data=json.dumps(tag_data) #converting to json string
+		values=(image_id, tag_id, tag_data)
+		sql="REPLACE INTO tags (image_id, tag_id, tag_data) VALUES (%s, %s, %s)"
+		self.query(sql, values=values)
+		return 1
 	
 	#---Simple/Necessary Queries---
 	
-	def getImages(self, selection='*', filter_params=[], order_by='date_taken', limit='LIMIT 100000', union=False):
+	def getImages(self, selection='*', filter_params=[], order_by='date_taken', limit='LIMIT 100000', union=False, tagname=None):
 		#returns images based on filter_params. See makeFilter()
 		#default arguments return (max)100000 images in database ordered by date_taken
 		where_clause, values=makeFilter(filter_params, union=union)
-		sql="SELECT "+selection+" FROM images "+where_clause+" ORDER BY "+order_by+" "+limit
+		if tagname is not None:
+			if tagname not in self.tag_dict.keys():
+				print("Specified tag does not exist. Ignoring tag.")
+			else:
+				tag_id=self.tag_dict[tagname]
+				values.insert(0, tag_id)
+				join="INNER JOIN tag_links ON tag_links.tag_id=%s AND tag_links.image_id=images.id"
+		else:
+			join=""
+		
+		sql="SELECT "+selection+" FROM images "+join+" "+where_clause+" ORDER BY "+order_by+" "+limit
 		values=tuple(values)
 		return self.query(sql, values=values)
-		
+	
+	def getTags(self):
+		#returns a tag dictionary of all tags.  {<tag_name>: tag_id, ...}
+		tags=self.query("SELECT * FROM tags")
+		tag_dict={}
+		for t in tags:
+			tag_dict[t['tagname']]=t['id']
+		return tag_dict	
 		
 	def getLocations(self):
 		#returns array of all locations (as dictionaries)
@@ -127,6 +162,7 @@ class DB():
 		return False
 		
 	def pruneIDs(self, id_list):
+		#checking to see which ids are already in database
 		if(len(id_list))<1:
 			return None
 		values=[]
@@ -136,7 +172,7 @@ class DB():
 		for i in range(1, len(id_list)):
 			sql=sql+"UNION ALL SELECT %s, %s "
 			values.extend([id_list[i][0], id_list[i][1]])
-		sql=sql+") search LEFT JOIN images ON search.id=images.id AND search.source LIKE images.source WHERE images.id is null"
+		sql=sql+") search LEFT JOIN images ON search.id=images.source_id AND search.source LIKE images.source WHERE images.id is null"
 		rows=self.query(sql, values=tuple(values))
 		pruned_ids=[]
 		for row in rows:

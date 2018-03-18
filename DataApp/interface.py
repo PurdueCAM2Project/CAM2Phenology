@@ -6,10 +6,63 @@
 import core
 import getpass
 import sys
+import displaywidgets as display
 
-meta=core.MetadataList() #class to keep track of loaded data. See core.py
+meta=core.metadata #class to keep track of loaded data. See core.py
 
-def displayData(dict_list):
+variables={'latitude': {'value': None, 'cast': float},
+	'longitude': {'value': None, 'cast': float},
+	'radius': {'value': None, 'cast': float},
+	'region': {'value': None, 'cast': str},
+	'notes': {'value': None, 'cast': str},
+	'update_thresh': {'value': None, 'cast': int},
+	'query string': {'value': None, 'cast': str},
+	'tagname': {'value': None, 'cast': str},
+	'tag data': {'value': None, 'cast': eval}
+	}
+
+
+commands={'ar': {'function': core.db.addRegion, 'arg_keys': ['region', 'latitude', 'longitude', 'radius'], 'printout': False},
+	'al': {'function': core.db.addLocation, 'arg_keys': ['latitude', 'longitude', 'radius', 'notes'], "printout": False},
+	'ud': {'function': core.scrapeLocations, 'arg_keys': ['update_thresh'], 'printout': False},
+	'ldq': {'function': meta.loadDataFromQuery, 'arg_keys': ['query string'], 'printout': False},
+	'q': {'function': core.db.query, 'arg_keys': ['query string'], 'printout': True},
+	'ct': {'function': core.db.createTag, 'arg_keys': ['tagname'], 'printout': False},
+	'view': {'function': display.ImageViewer, 'arg_keys': [], 'printout': False},
+	'sl': {'function': core.showLocations, 'arg_keys': [], 'printout': False},
+	'e': {'function': sys.exit, 'arg_keys': [], 'printout': False}
+	}
+
+display.images=meta.image_list
+display.variables=variables
+display.commands=commands
+
+def getInput(arg_keys, disp):
+	args=[]
+	for var in arg_keys:
+		if  not disp:
+			arg=input("Input "+str(var)+": ")
+			if arg=="":
+				variables[var]['value']=None
+			else:
+				variables[var]['value']=arg
+		if(variables[var]['value']!=None):
+			args.append(variables[var]['cast'](variables[var]['value']))
+	return args
+
+def executeCommand(command, disp=False):
+	args=getInput(commands[command]['arg_keys'], disp)
+	try:
+		if commands[command]['printout']:
+			print(str(commands[command]['function'](*args)))
+		else:
+			commands[command]['function'](*args)
+	except Exception as e:
+		print("Error: "+str(e))
+	
+
+
+"""def displayData(dict_list):
 	#displays rows of dicts (needs improvement)
 	if not dict_list:
 		print("none")
@@ -98,26 +151,22 @@ def loadImages():
 	print(str(len(meta.image_list))+" images loaded")
 	
 			
-parameters={'latitude': None, 'longitude': None, 'radius': None}
-functions={'q': queryDatabase, 'al': addLocation, 'ar': addRegion, 'ud': updateData, 'lr': loadRegion, 'li': loadImages, 'lq': loadQuery, 'pp': meta.plotPoints, 'dd': downloadData, 'e': sys.exit}	
+#parameters={'latitude': None, 'longitude': None, 'radius': None}
+#functions={'q': queryDatabase, 'al': addLocation, 'ar': addRegion, 'ud': updateData, 'lr': loadRegion, 'li': loadImages, 'lq': loadQuery, 'pp': meta.plotPoints, 'dd': downloadData, 'e': sys.exit}	
 
 def showFunctions():
 	print("Possible Functions:")
-	displayData([functions])
+	displayData([functions])"""
 	
 if __name__=='__main__':
-	core.login(getpass.getpass("Input password: "))
-	print("Enter input function. Type 'h' to see possible commands.")
+	#core.login(getpass.getpass("Input password: "))
+	print('INSECURE')
+	core.login('@globalPhen!7249')
+	
+	#print("Enter input function. Type 'h' to see possible commands.")
 	while True:
-		func=input("\nDataApp> ")
-		if func=='h':
-			showFunctions()
-		else:
-			if (func in functions.keys()):
-				functions[func]()
-			else:
-				print("Error. Invalid Function")
-			
+		command=input("GPSN >> ")
+		executeCommand(command)			
 			
 			
 			

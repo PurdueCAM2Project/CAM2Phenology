@@ -10,11 +10,15 @@ import json
 import search
 import datetime
 import utility as util
+from PIL import Image
 
 filter=database.filter #filter parameters for general queries on images table
 
 if not os.path.isfile('preferences.txt'):
 	import setup
+
+if not os.path.isdir('TimeSliders'):
+	os.makedirs('TimeSliders')
 	
 def getSetup():
 	with open("preferences.txt", 'r') as file:
@@ -38,9 +42,15 @@ def login(pswd):
 class MetadataList():
 
 	#class to keep track of metadata and call functions on sets of rows from database
-	
 	image_list=[]
-	
+
+	def loadDataFromQuery(self, query_string):
+		del self.image_list[:]
+		self.image_list.extend(db.query(query_string))
+
+	def loadData(self, *params):
+		self.image_list=db.loadFilter(*params)
+
 	def downloadImages(self, limit=None, path=default_image_path):
 		import random
 		regions=db.getRegions()
@@ -56,6 +66,12 @@ class MetadataList():
 			file_path=path+image_meta['region']+"/"+image_meta['source']+str(image_meta['id'])+'.jpg'
 			util.download(image_meta['url'], file_path)
 	
+	def getImage(self, index):
+		metadata=self.image_list[index]
+		util.download(metadata['url'], 'temporary.jpg')
+		im=Image.open('temporary.jpg')
+		return im, metadata
+
 	def getAttribute(self, attr_key):
 		#get one specific attribute from list of image dictionaries
 		attrList=[self.image_list[i][attr_key] for i in range(0, len(self.image_list))]
@@ -67,8 +83,10 @@ class MetadataList():
 		for meta in self.image_list:
 			coordinates.append((meta['latitude'], meta['longitude']))
 		modeldata.plotGoogleMap(coordinate_groups=[coordinates])
+
+metadata=MetadataList()
 		
-def scrapeArea(latitude, longitude, radius):
+def scrapeArea(latitude, longitude, radius, tag=None):
 	#searches area then commits images found to database
 	params={'lat': latitude, 'lon': longitude, 'radius': radius}
 	ids=search.search(params) #getting ids from apis
@@ -84,9 +102,19 @@ def scrapeLocations(update_thresh=1): #update_thresh= the threshhold that determ
 	for location in locations:
 		if(location['last_updated'] is not None and (datetime.datetime.today()-location['last_updated']).days<update_thresh):
 			break
-		scrapeArea(location['latitude'], location['longitude'], location['radius'])
+		print('Scraping '+str((location['latitude'], location['longitude'])))
+		scrapeArea(location['latitude'], location['longitude'], location['radius'], tag=location['region'])
 		db.updateLocation(location['id'])
-		
+
+def showLocations():
+	import webbrowser
+	locations=db.getLocations()
+	modeldata.plotGoogleMap(circles=[(locations[i]['latitude'], locations[i]['longitude'], locations[i]['radius']*1000) for i in range(0, len(locations))])	
+	webbrowser.open('temp.html')
+
+#def plotHourSlider(*filter_params):
+	
+	
 print("Connected to: "+host)
 print("User: "+user)
 print("Database: "+dbname)

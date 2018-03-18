@@ -22,7 +22,7 @@ def plotGoogleMap(coordinate_groups=[], circles=[], center=None, plot_name='temp
 		avglat=avglat/total
 		avglong=avglong/total
 		center=(avglat, avglong)
-	gmap=gmplot.GoogleMapPlotter(center[0], center[1], 12)
+	gmap=gmplot.GoogleMapPlotter(center[0], center[1], 13)
 	colors=list(gmplot.color_dicts.html_color_codes.keys())
 	i=0
 	color='k'
@@ -31,5 +31,7 @@ def plotGoogleMap(coordinate_groups=[], circles=[], center=None, plot_name='temp
 		lats, longs=zip(*group)
 		gmap.scatter(lats, longs, color, size=35, marker=False)
 		color=colors[i%len(colors)]
+	for circle in circles:
+		gmap.circle(circle[0], circle[1], circle[2])
 	gmap.draw('temp.html')
 		

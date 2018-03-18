@@ -17,8 +17,13 @@ with open("preferences.txt", 'w+') as file:
 	file.write(address+" "+username+" "+dbname)
 file.close()
 
-flickrkey=input("Enter flickr API key: ")
+keys={}
+keys['flickr']=input("Enter flickr API key: ")
+keys['twitter_consumer_key']=input("Enter Twitter consumer key: ")
+keys['twitter_consumer_secret']=input("Enter Twitter consumer Secret: ")
+keys['twitter_access_token']=input("Enter Twitter access token: ")
+keys['twitter_access_secret']=input("Enter Twitter access secret: ")
 with open("apikeys.json", 'w+') as file:
-	json.dump({'flickr': flickrkey}, file)
+	json.dump(keys, file)
 file.close()
 
