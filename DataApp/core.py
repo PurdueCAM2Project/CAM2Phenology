@@ -11,6 +11,7 @@ import search
 import datetime
 import utility as util
 from PIL import Image
+import analysis
 
 filter=database.filter #filter parameters for general queries on images table
 
@@ -83,6 +84,51 @@ class MetadataList():
 		for meta in self.image_list:
 			coordinates.append((meta['latitude'], meta['longitude']))
 		modeldata.plotGoogleMap(coordinate_groups=[coordinates])
+		
+	def getTimeSlider(self, delimeter):
+		buckets=[]
+		numbuckets=[]
+		if delimeter=='weekday':
+			numbuckets=7
+			for i in range(0, numbuckets):
+				buckets.append([])
+			for image_meta in self.image_list:
+				buckets[image_meta['date_taken'].weekday()].append(image_meta)
+		elif delimeter=="hour":
+			numbuckets=24
+			for i in range(0, numbuckets):
+				buckets.append([])
+			for image_meta in self.image_list:
+				buckets[image_meta['date_taken'].time().hour].append(image_meta)
+		elif delimeter=="month":
+			numbuckets=12
+			for i in range(0, numbuckets):
+				buckets.append([])
+			for image_meta in self.image_list:
+				buckets[image_meta['date_taken'].date().month-1].append(image_meta)
+		elif delimeter=="year":
+			numbuckets=14
+			for i in range(0, numbuckets):
+				buckets.append([])
+			for image_meta in self.image_list:
+				bucketnum=image_meta['date_taken'].date().year
+				if bucketnum>=2005:
+					buckets[bucketnum-2005].append(image_meta)
+
+		return buckets
+		
+	def graphTimeSlider(self, delimeter):
+		buckets=self.getTimeSlider(delimeter)
+		modeldata.graph(buckets, delimeter)
+		
+	def plotTimeSlider(self, delimeter):
+		buckets=self.getTimeSlider(delimeter)
+		buckets1=[]
+		for b in buckets:
+			b1=[(b[i]['latitude'], b[i]['longitude']) for i in range(0, len(b))]
+			buckets1.append(b1)
+		modeldata.plotGoogleMapByTime(buckets1)
+		
 
 metadata=MetadataList()
 		
@@ -109,12 +155,36 @@ def scrapeLocations(update_thresh=1): #update_thresh= the threshhold that determ
 def showLocations():
 	import webbrowser
 	locations=db.getLocations()
-	modeldata.plotGoogleMap(circles=[(locations[i]['latitude'], locations[i]['longitude'], locations[i]['radius']*1000) for i in range(0, len(locations))])	
+	modeldata.plotGoogleMap(circle_groups=[[(locations[i]['latitude'], locations[i]['longitude'], locations[i]['radius']*1000) for i in range(0, len(locations))]])	
 	webbrowser.open('temp.html')
+	
+def plotUserDayClusters():
+	import webbrowser
+	print('Not Implemented Correctly Yet.\nUsing "plotUserPaths"')
+	"""query_result=db.getUserDayOrderByTime()
+	
+	start_clusters, end_clusters=analysis.clusterUserDays(query_result)
+	points=start_clusters[0][
+	circle_groups=[]
+	
+	circle_groups.append([(start_clusters[i][0][0], start_clusters[i][0][1], start_clusters[i][1]*1000) for i in range(0, len(start_clusters))])
+	circle_groups.append([(end_clusters[i][0][0], end_clusters[i][0][1], end_clusters[i][1]*110.567*1000) for i in range(0, len(end_clusters))])
+	print(str(circle_groups))
+	modeldata.plotGoogleMap(circle_groups=circle_groups)
+	#webbrowser.open('temp.html')"""
 
+def plotUserPaths(filter_params=[]):
+	paths=db.getUserPaths(filter_params=filter_params)
+	start_markers=[]
+	end_markers=[]
+	for path in paths:
+		start_markers.append(path[0])
+		end_markers.append(path[-1])
+	modeldata.plotGoogleMap(polygon_groups=paths, marker_groups=[start_markers, end_markers])
+	
 #def plotHourSlider(*filter_params):
 	
-	
+
 print("Connected to: "+host)
 print("User: "+user)
 print("Database: "+dbname)

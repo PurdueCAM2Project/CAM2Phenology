@@ -18,7 +18,8 @@ variables={'latitude': {'value': None, 'cast': float},
 	'update_thresh': {'value': None, 'cast': int},
 	'query string': {'value': None, 'cast': str},
 	'tagname': {'value': None, 'cast': str},
-	'tag data': {'value': None, 'cast': eval}
+	'tag data': {'value': None, 'cast': eval},
+	'delimeter': {'value': None, 'cast': str}
 	}
 
 
@@ -30,6 +31,11 @@ commands={'ar': {'function': core.db.addRegion, 'arg_keys': ['region', 'latitude
 	'ct': {'function': core.db.createTag, 'arg_keys': ['tagname'], 'printout': False},
 	'view': {'function': display.ImageViewer, 'arg_keys': [], 'printout': False},
 	'sl': {'function': core.showLocations, 'arg_keys': [], 'printout': False},
+	'pudc': {'function': core.plotUserDayClusters, 'arg_keys': [], 'printout': False},
+	'pup': {'function': core.plotUserPaths, 'arg_keys': [], 'printout': False},
+	'gts': {'function': meta.graphTimeSlider, 'arg_keys': ['delimeter'], 'printout': False},
+	'pp': {'function': meta.plotPoints, 'arg_keys': [], 'printout': False},
+	'pts': {'function': meta.plotTimeSlider, 'arg_keys': ['delimeter'], 'printout': False},
 	'e': {'function': sys.exit, 'arg_keys': [], 'printout': False}
 	}
 
@@ -52,15 +58,18 @@ def getInput(arg_keys, disp):
 
 def executeCommand(command, disp=False):
 	args=getInput(commands[command]['arg_keys'], disp)
-	try:
+	"""try:
 		if commands[command]['printout']:
 			print(str(commands[command]['function'](*args)))
 		else:
 			commands[command]['function'](*args)
 	except Exception as e:
-		print("Error: "+str(e))
+		print("Error: "+str(e))"""
 	
-
+	if commands[command]['printout']:
+		print(str(commands[command]['function'](*args)))
+	else:
+		commands[command]['function'](*args)
 
 """def displayData(dict_list):
 	#displays rows of dicts (needs improvement)
@@ -161,8 +170,7 @@ def showFunctions():
 if __name__=='__main__':
 	#core.login(getpass.getpass("Input password: "))
 	print('INSECURE')
-	core.login('@globalPhen!7249')
-	
+	core.login('globalphenology319')
 	#print("Enter input function. Type 'h' to see possible commands.")
 	while True:
 		command=input("GPSN >> ")

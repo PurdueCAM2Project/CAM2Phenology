@@ -25,11 +25,10 @@ def processID(id):
 		print("API not auth'd properly")
 		return
 	tweet = api.get_status(id)
-	print('hmm')
 	if tweet is not None:
 		coordinates = tweet.place.bounding_box.coordinates[0][0]
 		url = tweet.entities.get("media", [{}])[0]['media_url_https']
-		return {'id': id, 'source': 'twitter', 'latitude': coordinates[1], 'longitude': coordinates[0], 'url': url, 'date_taken': tweet.created_at}
+		return {'id': id, 'source': 'twitter', 'latitude': coordinates[1], 'longitude': coordinates[0], 'gps': (coordinates[1], coordinates[0]), 'url': url, 'date_taken': tweet.created_at}
 	return -1
 
 def searchIds(params):

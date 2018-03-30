@@ -6,9 +6,10 @@ import apirequest
 import time
 import json
 
+#apis={}
 apis={'flickr': flickrsearch} #api modules
-if twittersearch.authenticated:
-	apis['twitter']=twittersearch
+"""if twittersearch.authenticated:
+	apis['twitter']=twittersearch"""
 
 def search(params):
 	#Using API services to search a given area

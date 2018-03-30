@@ -39,7 +39,7 @@ def makeFilter(params, union=False):
 	return sql, values
 	
 class DB():
-#Access and update database
+	#Access and update database
 
 	def connect(self, host, user, dbname, pswd):
 		#connecting to database
@@ -61,12 +61,13 @@ class DB():
 		self.connection.commit()
 		return self.cursor.fetchall()
 		
+
 	def addRegion(self, region_name, latitude, longitude, radius=None):
 		"""polygon="POLYGON("
 		character='('
 		for point in polygon_points:
 			polygon=polygon+character+str(point[0])+' '+str(point[1])
-			character=', '
+		whatthe	character=', '
 		polygon=polygon+"))
 		print (polygon)"""
 		sql="INSERT IGNORE INTO regions (name, mean_point, radius) VALUES(%s, POINT%s, %s)"
@@ -178,8 +179,32 @@ class DB():
 		for row in rows:
 			pruned_ids.append((row['id'], row['source']))
 		return pruned_ids
+				
+
+		#----------------------------------------
 		
+		#-------Analytical Queries---------------
+	def getUserDayOrderByTime(self, filter_params=[]):
+		where_clause, values=makeFilter(filter_params)
+		sql="SELECT DATE(date_taken) AS date, TIME(date_taken) as time, userid, ST_X(gps) as latitude, ST_Y(gps) as longitude from images "+where_clause+" group by userid, date_taken, gps order by time"
+		return self.query(sql, values=values)
 		
+	def getUserPaths(self, filter_params=[]):
+		query_result=self.getUserDayOrderByTime(filter_params=filter_params)
+		user_paths=[]
+		date=query_result[0]['date']
+		userid=query_result[0]['userid']
+		path=[]
+		for row in query_result:
+			if(row['userid']!=userid or row['date']!=date):
+				if len(path)>1:
+					user_paths.append(path)
+				path=[]
+				userid=row['userid']
+				date=row['date']
+			path.append((row['latitude'], row['longitude']))
+		user_paths.append(path)
+		return user_paths
 
 """class SQL: #Class to format sql queries (unsure if this is needed yet)
 
@@ -215,10 +240,5 @@ class DB():
 		sql=" FROM "+table+" "+where_clause
 		return sql, values"""
 	
-if __name__=="__main__":
-	db=DB()
-	db.connect('localhost', 'root', "Phenology", "Wettfd2312")
-	#db.addRegion('test', '4.0', '5.0')
-	db.addRegion('test', 4.2, -23.5, [(0, 0), (10, 0), (0, 10), (0, 0)])
-	
+
 		
