@@ -71,22 +71,22 @@ def ParseImages():
                 analysisArray = None
                 if not len(xRegionData): #No regions specified, so process entire image
                     analysisArray = misc.imread(filename)
-                    greenIndex = CalculateGreenIndex(analysisArray)
+                    greenIndex, redIndex = CalculateGreenIndex(analysisArray)
                     if greenIndex != -1:
-                        plotData[0].append([date, greenIndex])
+                        plotData[0].append([date, greenIndex, redIndex])
                 else:
                     for counter in range(0, len(xRegionData)):
                         analysisArray = misc.imread(filename)
                         analysisArray = analysisArray[int(xRegionData[counter][0]) : int(xRegionData[counter][1]) + 1,
                                                       int(yRegionData[counter][0]) : int(yRegionData[counter][1]) + 1, :]
                         #Image.fromarray(analysisArray, 'RGB').show()
-                        greenIndex = CalculateGreenIndex(analysisArray)
+                        greenIndex, redIndex = CalculateGreenIndex(analysisArray)
                         if greenIndex != -1:
                             if counter in plotData.keys():
-                                plotData[counter].append([date, greenIndex])
+                                plotData[counter].append([date, greenIndex, redIndex])
                             else: #First time a region is being processed
-                                plotData[counter] = [[date, greenIndex]]
-                tempData.append(GetTemperature(date))
+                                plotData[counter] = [[date, greenIndex, redIndex]]
+                #tempData.append(GetTemperature(date))
     #print(plotData)
     if not len(xRegionData): #For labeling when no regions are selected
         xRegionData = [[0, analysisArray.shape[0]]]
@@ -94,13 +94,11 @@ def ParseImages():
     for pointSet, pointDataSet in plotData.items():
         PlotGreenIndex([item[0] for item in pointDataSet],
                        [item[1] for item in pointDataSet],
+                       [item[2] for item in pointDataSetSet],
                        xRegionData[pointSet],
                        yRegionData[pointSet], tempData)
 
 def GetTemperature(date):
-    #print(date.year)
-    #print(date.month)
-    #print(date.day)
     url = ('https://www.wunderground.com/history/airport/KTYS/' + str(date.year) + '/'
            + str(date.month) + '/' + str(date.day) + '/DailyHistory.html')
     #print(url)
@@ -109,25 +107,22 @@ def GetTemperature(date):
     weatherNext = False
     for element in soup.find_all('td'):
         if weatherNext:
-            #print(element)
             tempSearch = re.search(pattern, str(element))
             return float(tempSearch.group(0)) / 200 #/200 to scale data down so it can be seen on same scale as Greenness Index
-            #print(tempSearch.group(0))
-            #weatherNext = False
         if "11:" in str(element) and "AM" in str(element) and "EST" not in str(element) and "EDT" not in str(element):
-            #print(element)
             weatherNext = True
 
 def CalculateGreenIndex(imageArray):
     RGB = float(sum(imageArray))
     if RGB == 0:
         return -1
-    return float(sum(imageArray[:,:,1])) / RGB #Greenness index: G / (R + G + B)
+    return (float(sum(imageArray[:,:,1])) / RGB, float(sum(imageArray[:, :, 0])) / RGB) #Greenness index: G / (R + G + B)
 
-def PlotGreenIndex(timeList, greenList, xPoints, yPoints, tempData):
+def PlotGreenIndex(timeList, greenList, redList, xPoints, yPoints, tempData):
 
     pylab.figure()
     pylab.scatter(timeList, greenList)
+    pylab.scatter(timeList, redList)
     pylab.title(str(xPoints) + " " + str(yPoints))
     pylab.ylabel("Greenness Index")
     pylab.xlabel("Date of Picture")
@@ -135,26 +130,34 @@ def PlotGreenIndex(timeList, greenList, xPoints, yPoints, tempData):
     for timeStamp in timeList:
         timeLabels += [int(time.mktime(timeStamp.timetuple()))]
 
-    max = 0
-    min = 1000
-    minDate, maxDate = 0, 0
-    for i, greenIndex in enumerate(greenList):
-        if greenIndex < min:
-            min = greenIndex
-            minDate = timeList[i]
-        elif greenIndex > max:
-            max = greenIndex
-            maxDate = timeList[i]
-    print (minDate)
-    print (maxDate)
+    maxGreen, maxRed = 0, 0
+    minGreen, minRed = 1000, 1000
+    minDateG, maxDateG, minDateR, maxDateR = 0, 0, 0, 0
+    for i, greenIndex, redIndex in enumerate(greenList):
+        if greenIndex < minGreen:
+            minGreen = greenIndex
+            minDateG = timeList[i]
+        elif greenIndex > maxGreen:
+            maxGreen = greenIndex
+            maxDateG = timeList[i]
+        if redIndex < minRed:
+            minRed = redIndex
+            minDateR = timeList[i]
+        elif redIndex > maxRed:
+            maxRed = redIndex
+            maxDateR = timeList[i]
+    print (minDateG)
+    print (maxDateG)
+    print (minDateR)
+    print (maxDateR)
     print(tempData)
-    z = polyfit(timeLabels, greenList, 1)
+    #z = polyfit(timeLabels, greenList, 1)
     #t = polyfit(timeLabels, tempData, 2)
-    p = poly1d(z)
+    #p = poly1d(z)
     #p_t = poly1d(t)
-    pylab.plot(timeList, p(timeLabels), "r--")
+    #pylab.plot(timeList, p(timeLabels), "r--")
     #pylab.plot(timeList, p_t(tempData), "m--")
-    pylab.scatter(timeList, tempData, c = "g")
+    #pylab.scatter(timeList, tempData, c = "g")
     mpldatacursor.datacursor()
     print (p)
     pylab.show()
