@@ -8,8 +8,10 @@ import json
 
 #apis={}
 apis={'flickr': flickrsearch} #api modules
+#TODO:
 """if twittersearch.authenticated:
-	apis['twitter']=twittersearch"""
+	apis['twitter']=twittersearch
+apis['fivepx']=fivepxsearch"""
 
 def search(params):
 	#Using API services to search a given area
@@ -64,10 +66,10 @@ def compileData(ids):
 	return data"""
 
 if __name__=='__main__':
-	ids=search({'lat': 35.6582, 'lon': -83.52, 'radius': 1})
+	ids=search({'lat': 35.6583, 'lon': -83.52, 'radius': 1})
 	print(str(len(ids)))
 	t1=time.time()
-	data=compileData_thread(ids)
+	data=compileData(ids)
 	print(str(len(data)))
 	print(str(time.time()-t1))
 	with open('testdata.json', 'w+') as file:
