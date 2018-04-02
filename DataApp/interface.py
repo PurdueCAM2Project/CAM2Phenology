@@ -58,18 +58,18 @@ def getInput(arg_keys, disp):
 
 def executeCommand(command, disp=False):
 	args=getInput(commands[command]['arg_keys'], disp)
-	"""try:
+	try:
 		if commands[command]['printout']:
 			print(str(commands[command]['function'](*args)))
 		else:
 			commands[command]['function'](*args)
 	except Exception as e:
-		print("Error: "+str(e))"""
+		print("Error: "+str(e))
 	
-	if commands[command]['printout']:
+	"""if commands[command]['printout']:
 		print(str(commands[command]['function'](*args)))
 	else:
-		commands[command]['function'](*args)
+		commands[command]['function'](*args)"""
 
 """def displayData(dict_list):
 	#displays rows of dicts (needs improvement)
@@ -168,9 +168,7 @@ def showFunctions():
 	displayData([functions])"""
 	
 if __name__=='__main__':
-	#core.login(getpass.getpass("Input password: "))
-	print('INSECURE')
-	core.login('globalphenology319')
+	core.login(getpass.getpass("Input password: "))
 	#print("Enter input function. Type 'h' to see possible commands.")
 	while True:
 		command=input("GPSN >> ")
