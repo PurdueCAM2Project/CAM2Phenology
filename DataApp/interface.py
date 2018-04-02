@@ -19,7 +19,10 @@ variables={'latitude': {'value': None, 'cast': float},
 	'query string': {'value': None, 'cast': str},
 	'tagname': {'value': None, 'cast': str},
 	'tag data': {'value': None, 'cast': eval},
-	'delimeter': {'value': None, 'cast': str}
+	'delimeter': {'value': None, 'cast': str},
+	'limit': {'value': None, 'cast': int},
+	'path': {'value': core.default_image_path, 'cast': str},
+	'name_by_date': {'value': None, 'cast': eval}
 	}
 
 
@@ -36,6 +39,7 @@ commands={'ar': {'function': core.db.addRegion, 'arg_keys': ['region', 'latitude
 	'gts': {'function': meta.graphTimeSlider, 'arg_keys': ['delimeter'], 'printout': False},
 	'pp': {'function': meta.plotPoints, 'arg_keys': [], 'printout': False},
 	'pts': {'function': meta.plotTimeSlider, 'arg_keys': ['delimeter'], 'printout': False},
+	'di': {'function': meta.downloadImages, 'arg_keys': ['limit', 'path', 'name_by_date'], 'printout': False},
 	'e': {'function': sys.exit, 'arg_keys': [], 'printout': False}
 	}
 
@@ -48,12 +52,13 @@ def getInput(arg_keys, disp):
 	for var in arg_keys:
 		if  not disp:
 			arg=input("Input "+str(var)+": ")
-			if arg=="":
-				variables[var]['value']=None
-			else:
+			if arg!="":
 				variables[var]['value']=arg
 		if(variables[var]['value']!=None):
 			args.append(variables[var]['cast'](variables[var]['value']))
+		#else:
+		#	args.append(variables[var]['value'])
+	#print(str(args))
 	return args
 
 def executeCommand(command, disp=False):

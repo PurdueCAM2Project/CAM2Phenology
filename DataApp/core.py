@@ -52,11 +52,12 @@ class MetadataList():
 	def loadData(self, *params):
 		self.image_list=db.loadFilter(*params)
 
-	def downloadImages(self, limit=None, path=default_image_path):
+	def downloadImages(self, limit=None, path=default_image_path, name_by_date=False):
 		import random
 		regions=db.getRegions()
+		print(str(path))
 		for region in regions:
-			if not os.path.exists(path+region['name']):
+			if not os.path.exists(path+region['name'].replace(" ", "_")):
 				os.makedirs(path+region['name'].replace(' ', '_'))
 		random.shuffle(self.image_list) #might need optimizations if handling large lists (this can be done in constant time in sql)
 		if limit is None or int(limit)==len(self.image_list):
@@ -64,8 +65,12 @@ class MetadataList():
 		limit=int(limit)
 		for i in range(0, limit):
 			image_meta=self.image_list[i]
-			file_path=path+image_meta['region']+"/"+image_meta['source']+str(image_meta['id'])+'.jpg'
-			util.download(image_meta['url'], file_path)
+			if name_by_date:
+				file_name=image_meta['source']+"_"+image_meta['date_taken'].strftime("%Y-%m-%d_%H:%M:%S").replace(":", "-")
+			else:
+				file_name=image_meta['source']+str(image_meta['id'])+'.jpg'
+			file_path=path+image_meta['region'].replace(" ", "_")+"/"+file_name
+			util.downloadWithExif(image_meta, file_path)
 	
 	def getImage(self, index):
 		metadata=self.image_list[index]

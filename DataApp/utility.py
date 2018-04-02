@@ -74,6 +74,25 @@ def download(url, file_path):
 			print('HTTP Error')
 		else:
 			return
+		
+def downloadWithExif(image_dict, file_path):
+	import piexif	
+	fp=file_path.split(".")
+	if fp[-1]!='jpg':
+		file_path=file_path+'.jpg'
+	try:
+		download(image_dict['url'], file_path)
+	except Exception as e:
+		print("Error: "+str(e))
+		return
+	print(file_path)
+	exif_dict={}
+	exif_dict['Exif']={}
+	exif_dict['Exif'][piexif.ExifIFD.UserComment]=str((image_dict['latitude'], image_dict['longitude'])) #dumping gps into user comment
+	#TODO: add legitimate exif tags for all metadata
+	exif_dict['Exif'][piexif.ExifIFD.DateTimeOriginal]=image_dict['date_taken'].strftime("%Y-%m-%d %H:%M:%S")
+	exif_bytes=piexif.dump(exif_dict)
+	piexif.insert(exif_bytes, file_path)
 			
 def getImage(image_dict):
 	from PIL import Image
@@ -81,5 +100,5 @@ def getImage(image_dict):
 		download(image_dict['url'], 'getimage.jpg')
 		return Image.open('getimage.jpg')
 	except Exception as e:
-		print("Error: "+e)			
+		print("Error: "+str(e))			
 
