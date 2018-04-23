@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+{% load staticfiles %}
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Video Page</title>
+    <link rel="stylesheet" href="{% static 'css/mystyle.css' %}">
+</head>
+<body>
+<font size="55">
+    <b>
+        <p align="center">
+        {{ data }}
+        </p>
+    </b>
+</font>
+<img src="{% static 'images/Clifftops.JPG' %}"  width="100" height="500" class="center">
+<video width="600" height="600" controls class="center">
+  <source src="{% static 'video/intro.mp4' %}" type="video/mp4">
+</video>
+
+</body>
+</html>ls
