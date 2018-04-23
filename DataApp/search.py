@@ -13,7 +13,8 @@ apis={'flickr': flickrsearch} #api modules
 	apis['twitter']=twittersearch
 apis['fivepx']=fivepxsearch"""
 
-def search(params):
+def search(p):
+	params=p
 	#Using API services to search a given area
 	#params={paramname: param, ...}
 	#params={'lat': <latitude>, 'lon': <longitude>, 'radius': <radius>}
@@ -21,7 +22,6 @@ def search(params):
 	for api in apis.keys():
 		source_ids=apis[api].searchIds(params)
 		ids.extend([(source_ids[i], api) for i in range(0, len(source_ids))])
-	#print(str(ids))
 	return ids
 
 def compileData(ids):
@@ -30,6 +30,8 @@ def compileData(ids):
 	data=[] 
 	for id in ids:
 		image_data=apis[id[1]].processID(id[0])
+		if len(id)>2:
+			image_data['tags']=id[2]
 		if image_data != -1:
 			data.append(image_data)
 		#print(str(data[-1]))

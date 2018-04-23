@@ -32,14 +32,17 @@ def getResponse(url):
 			
 def searchIds(params):
 	#gets the image ids of search given by params {}
-	#https://www.flickr.com/services/api/explore/flickr.photos.search
-	
-	lat=params['lat']
-	lon=params['lon']
-	radius=params['radius']
+	#https://www.flickr.com/services/api/explore/flickr.photos.search\
 	searchurl=url
 	searchurl=url+'search&api_key='+key+'&per_page=500'+format
-	searchurl=searchurl+'&lat='+str(lat)+'&lon='+str(lon)+'&radius='+str(radius)
+	
+	if 'geo' in params.keys():
+		lat=params['geo']['latitude']
+		lon=params['geo']['longitude']
+		radius=params['geo']['radius']
+		searchurl=searchurl+'&lat='+str(lat)+'&lon='+str(lon)+'&radius='+str(radius)
+	if 'tags' in params.keys():
+		searchurl=searchurl+'&tags='+str(params['tags']).replace(" ", "+")
 	data=json.loads(getResponse(searchurl).decode())
 	total=int(data['photos']['total'])
 	ids=[]
@@ -76,18 +79,21 @@ def parseInfo(data):
 		image_dict={}
 		urls=data['photo']['urls']
 		url=urls['url'][0]['_content']
+		location=None
+		date_taken=None
+		gps=None
 		#url=htmlParser.htmlParse(urls['url'][0]['_content'])
 		if url is None:
 			return None
-		if("location" not in data['photo'].keys()):
-			return None
-		location=data['photo']['location']
-		if('dates' not in data['photo'].keys()):
-			return None
-		dates=data['photo']['dates']
-		if ('taken' not in dates.keys()):
-			return None
-		date_taken=datetime.strptime(dates['taken'], "%Y-%m-%d %H:%M:%S")
+		if("location" in data['photo'].keys()):
+			location=data['photo']['location']
+			gps=(float(location['latitude']), float(location['longitude']))
+			image_dict['latitude']=gps[0]
+			image_dict['longitude']=gps[1]
+		if('dates' in data['photo'].keys()):
+			dates=data['photo']['dates']
+			if ('taken' in dates.keys()):
+				date_taken=datetime.strptime(dates['taken'], "%Y-%m-%d %H:%M:%S")
 		if ('people' in data['photo'].keys()):
 			people=data['photo']['people']
 			if('haspeople' in people.keys()):
@@ -95,10 +101,7 @@ def parseInfo(data):
 		id=data['photo']['id']
 		owner=data['photo']['owner']
 		userid=owner['nsid']
-		gps=(float(location['latitude']), float(location['longitude']))
 		image_dict={'id': id, 'url': url, 'date_taken': date_taken, 'gps': gps, 'source': 'flickr', 'userid': userid}
-		image_dict['latitude']=gps[0]
-		image_dict['longitude']=gps[1]
 		return image_dict
 		
 def findJpeg(image_dict):

@@ -88,7 +88,8 @@ def downloadWithExif(image_dict, file_path):
 	print(file_path)
 	exif_dict={}
 	exif_dict['Exif']={}
-	exif_dict['Exif'][piexif.ExifIFD.UserComment]=str((image_dict['latitude'], image_dict['longitude'])) #dumping gps into user comment
+	if 'latitude' in image_dict.keys():
+		exif_dict['Exif'][piexif.ExifIFD.UserComment]=str((image_dict['latitude'], image_dict['longitude'])) #dumping gps into user comment
 	#TODO: add legitimate exif tags for all metadata
 	exif_dict['Exif'][piexif.ExifIFD.DateTimeOriginal]=image_dict['date_taken'].strftime("%Y-%m-%d %H:%M:%S")
 	exif_bytes=piexif.dump(exif_dict)
@@ -100,5 +101,13 @@ def getImage(image_dict):
 		download(image_dict['url'], 'getimage.jpg')
 		return Image.open('getimage.jpg')
 	except Exception as e:
-		print("Error: "+str(e))			
+		print("Error: "+str(e))	
+
+def imageFromUrl(url):
+	from PIL import Image
+	import requests
+	from io import BytesIO
+	response = requests.get(url)
+	img = Image.open(BytesIO(response.content))
+	return img
 

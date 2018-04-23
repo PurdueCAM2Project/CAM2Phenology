@@ -4,6 +4,7 @@
 #02/12/18
 
 import core
+from core import Search
 import getpass
 import sys
 import displaywidgets as display
@@ -28,18 +29,21 @@ variables={'latitude': {'value': None, 'cast': float},
 
 commands={'ar': {'function': core.db.addRegion, 'arg_keys': ['region', 'latitude', 'longitude', 'radius'], 'printout': False},
 	'al': {'function': core.db.addLocation, 'arg_keys': ['latitude', 'longitude', 'radius', 'notes'], "printout": False},
-	'ud': {'function': core.scrapeLocations, 'arg_keys': ['update_thresh'], 'printout': False},
+	'ud': {'function': Search.scrapeLocations, 'arg_keys': ['update_thresh'], 'printout': False},
 	'ldq': {'function': meta.loadDataFromQuery, 'arg_keys': ['query string'], 'printout': False},
 	'q': {'function': core.db.query, 'arg_keys': ['query string'], 'printout': True},
 	'ct': {'function': core.db.createTag, 'arg_keys': ['tagname'], 'printout': False},
 	'view': {'function': display.ImageViewer, 'arg_keys': [], 'printout': False},
-	'sl': {'function': core.showLocations, 'arg_keys': [], 'printout': False},
+	'sl': {'function': Search.showLocations, 'arg_keys': [], 'printout': False},
 	'pudc': {'function': core.plotUserDayClusters, 'arg_keys': [], 'printout': False},
 	'pup': {'function': core.plotUserPaths, 'arg_keys': [], 'printout': False},
 	'gts': {'function': meta.graphTimeSlider, 'arg_keys': ['delimeter'], 'printout': False},
 	'pp': {'function': meta.plotPoints, 'arg_keys': [], 'printout': False},
 	'pts': {'function': meta.plotTimeSlider, 'arg_keys': ['delimeter'], 'printout': False},
 	'di': {'function': meta.downloadImages, 'arg_keys': ['limit', 'path', 'name_by_date'], 'printout': False},
+	'ast': {'function': core.db.addSearchTag, 'arg_keys': ['tagname'], 'printout': False},
+	'sts': {'function': core.Search.tagSearch, 'arg_keys': ['tagname'], 'printout': False},
+	'ls': {'function': Search.scrapeArea, 'arg_keys': ['latitude', 'longitude', 'radius'], 'printout': False},
 	'e': {'function': sys.exit, 'arg_keys': [], 'printout': False}
 	}
 
@@ -49,6 +53,7 @@ display.commands=commands
 
 def getInput(arg_keys, disp):
 	args=[]
+	print(str(arg_keys))
 	for var in arg_keys:
 		if  not disp:
 			arg=input("Input "+str(var)+": ")
@@ -63,18 +68,18 @@ def getInput(arg_keys, disp):
 
 def executeCommand(command, disp=False):
 	args=getInput(commands[command]['arg_keys'], disp)
-	try:
+	"""try:
 		if commands[command]['printout']:
 			print(str(commands[command]['function'](*args)))
 		else:
 			commands[command]['function'](*args)
 	except Exception as e:
-		print("Error: "+str(e))
+		print("Error: "+str(e))"""
 	
-	"""if commands[command]['printout']:
+	if commands[command]['printout']:
 		print(str(commands[command]['function'](*args)))
 	else:
-		commands[command]['function'](*args)"""
+		commands[command]['function'](*args)
 
 """def displayData(dict_list):
 	#displays rows of dicts (needs improvement)

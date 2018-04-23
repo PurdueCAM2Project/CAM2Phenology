@@ -61,7 +61,6 @@ class DB():
 		self.connection.commit()
 		return self.cursor.fetchall()
 		
-
 	def addRegion(self, region_name, latitude, longitude, radius=None):
 		"""polygon="POLYGON("
 		character='('
@@ -81,14 +80,22 @@ class DB():
 		region=self.query(sql, values=(gps,))[0]['name']
 		sql="INSERT INTO locations(region, gps, radius, notes) VALUES(%s, POINT%s, %s, %s)"
 		self.query(sql, values=(region, gps, radius, notes))
+		
+	def addSearchTag(self, tagname):
+		self.createTag(tagname)
+		sql="REPLACE INTO search_tags (tag_id) VALUES (%s)"
+		self.query(sql, values=(self.tag_dict[tagname]))
 	
-	def addImage(self, id, source, date_taken, gps, latitude, longitude, userid=None, region=None, url=None, cluster_id=None, alt_id=None):
-		#print(str(gps))
-		if region is None:
-			sql="SELECT name FROM regions ORDER BY ST_DISTANCE(POINT%s, regions.mean_point) limit 1"
-			region=self.query(sql, values=(gps,))[0]['name']
-		sql="REPLACE INTO images (source_id, source, region, date_taken, gps,  latitude, longitude, userid, url, cluster_id, alt_id) VALUES (%s, %s, %s, %s, POINT%s, %s, %s, %s, %s, %s ,%s)"
-		self.query(sql, values=(id, source, region, date_taken, gps, latitude, longitude, userid, url, cluster_id, alt_id))	
+	def addImage(self, id, source, date_taken, gps=None, latitude=None, longitude=None, userid=None, url=None, cluster_id=None, alt_id=None, imagehash=None, tags=None):
+		if gps is not None:
+			point_str="POINT%s"
+		else:
+			point_str="%s"
+		sql="INSERT IGNORE INTO images (source_id, source, date_taken, gps,  latitude, longitude, userid, url, cluster_id, alt_id) VALUES (%s, %s, %s, "+point_str+", %s, %s, %s, %s, %s ,%s)"
+		self.query(sql, values=(id, source, date_taken, gps, latitude, longitude, userid, url, cluster_id, alt_id))	
+		if tags is not None: #Poor runtime in some cases
+			image_id=self.query("SELECT LAST_INSERT_ID()")[0]["LAST_INSERT_ID()"]
+			self.tagImage(image_id, tags)
 		return 1
 
 	def addImages(self, image_dicts):
@@ -102,18 +109,21 @@ class DB():
 		self.query(sql, values=(today, location_id))
 
 	def createTag(self, tagname):
-		self.query("INSERT INTO tags (tagname) values (%s)", values=(tagname))
+		print(str(self.tag_dict))
+		self.query("INSERT IGNORE INTO tags (tagname) values (%s)", values=(tagname))
 		self.tag_dict=self.getTags()
+		print(str(self.tag_dict))
+		return self.tag_dict[tagname]
 
-	def tagImage(self, image_id, tagname, tag_data):
-		if tag_name not in self.tag_dict.keys():
-			print("Error, tag does not exist.")
-			return 0
+	def tagImage(self, image_id, tagname, tag_data=None, tag_value=None):
+		if tagname not in self.tag_dict.keys():
+			print("Creating tag: '"+tagname+"'")
+			self.createTag(tagname)
 		tag_id=self.tag_dict[tagname]
 		if tag_data is not None:
 			tag_data=json.dumps(tag_data) #converting to json string
-		values=(image_id, tag_id, tag_data)
-		sql="REPLACE INTO tags (image_id, tag_id, tag_data) VALUES (%s, %s, %s)"
+		values=(image_id, tag_id, tag_data, tag_value)
+		sql="REPLACE INTO tag_links (image_id, tag_id, tag_data, tag_value) VALUES (%s, %s, %s, %s)"
 		self.query(sql, values=values)
 		return 1
 	
@@ -144,8 +154,12 @@ class DB():
 		for t in tags:
 			tag_dict[t['tagname']]=t['id']
 		return tag_dict	
+	
+	def getSearchTags(self, unsearched=False):
+		sql="SELECT * FROM search_tags INNER JOIN tags ON search_tags.tag_id=tags.id"
+		return self.query(sql)
 		
-	def getLocations(self):
+	def getLocations(self, unsearched=False):
 		#returns array of all locations (as dictionaries)
 		return self.query("SELECT *, ST_X(gps) as latitude, ST_Y(gps) as longitude FROM locations ORDER BY last_updated")
 		
@@ -189,6 +203,17 @@ class DB():
 		sql="SELECT DATE(date_taken) AS date, TIME(date_taken) as time, userid, ST_X(gps) as latitude, ST_Y(gps) as longitude from images "+where_clause+" group by userid, date_taken, gps order by time"
 		return self.query(sql, values=values)
 		
+	def getTagParams(self, tagname):
+		if tagname not in self.tag_dict.keys():
+			self.tag_dict=self.getTags()
+			if tagname not in self.tag_dict.keys();
+				print("Tag not found.")
+				return -1
+		tag_id=self.tag_dict[tagname]
+		sql="SELECT STDDEV(tag_value) as stddev, AVG(tag_value) as mean FROM tag_links WHERE tag_id=%s"
+		result=self.query(sql, values=(tag_id))
+		return result[0]['stddev'], result[0]['mean']
+		
 	def getUserPaths(self, filter_params=[]):
 		query_result=self.getUserDayOrderByTime(filter_params=filter_params)
 		user_paths=[]
@@ -206,6 +231,11 @@ class DB():
 		user_paths.append(path)
 		return user_paths
 
+	#----------Update queries--------
+	def updateImage(self, image_id, attribute, new_value):
+		sql="UPDATE TABLE images SET %s=%s WHERE image_id=%s"
+		self.query(sql, values=(attribute, new_value, image_id))
+		
 """class SQL: #Class to format sql queries (unsure if this is needed yet)
 
 	in_circle="ST_WITHIN(gps, ST_BUFFER(POINT%s, %s))=1"

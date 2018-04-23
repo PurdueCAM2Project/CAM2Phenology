@@ -40,6 +40,68 @@ default_image_path='images/' #where images will be downloaded to
 def login(pswd):
 	db.connect(host, user, dbname, pswd)
 	
+class Search:
+
+	def searchCommit(params):
+		#Takes formatted params and starts threads to search for data and commit to database
+		search_function=search.compileData
+		commit_function=db.addImages
+		ids=search.search(params) 	#Searching apis for image ids
+		ids=db.pruneIDs(ids) 		#Removing duplicate ids
+		#See utility.py
+		util.pipeData(ids, [search_function, commit_function], [3, 1], 20)
+
+	def scrapeArea(latitude, longitude, radius, tag=None):
+		#searches area then commits images found to database
+		params={'geo': {'latitude': latitude, 'longitude': longitude, 'radius': radius}}
+		Search.searchCommit(params)
+	
+	def tagSearch(tagname):
+		params={'tags': tagname}
+		search_function=search.compileData
+		commit_function=db.addImages
+		ids=search.search(params) 	#Searching apis for image ids
+		ids=db.pruneIDs(ids) 		#Removing duplicate ids
+		ids=[(ids[i][0], ids[i][1], tagname) for i in range(0, len(ids))]
+		print(str(len(ids)))
+		#See utility.py
+		util.pipeData(ids, [search_function, commit_function], [3, 1], 1)
+		
+	def scrapeLocations(update_thresh=1): #update_thresh= the threshhold that determines when to update a location
+		locations=db.getLocations()
+		#Scraping for new images
+		for location in locations:
+			if(location['last_updated'] is not None and (datetime.datetime.today()-location['last_updated']).days<update_thresh):
+				break
+			print('Scraping '+str((location['latitude'], location['longitude'])))
+			scrapeArea(location['latitude'], location['longitude'], location['radius'], tag=location['region'])
+			db.updateLocation(location['id'])
+
+	def showLocations():
+		import webbrowser
+		locations=db.getLocations()
+		modeldata.plotGoogleMap(circle_groups=[[(locations[i]['latitude'], locations[i]['longitude'], locations[i]['radius']*1000) for i in range(0, len(locations))]])	
+		webbrowser.open('temp.html')
+
+		
+def tagImagesFromModule(images, module):
+	#moduleFunction: input: PIL image, output: resulting tag data 
+	def procFunction(images):
+		output=[]
+		for image_dict in images:
+			img=util.imageFromUrl(image_dict['url'])
+			tags=module(img)
+			output.append((image_dict['id'], tags))
+		return output
+		
+	def tagFunction(image_tags):
+		for image_tag in image_tags:
+			tags=image_tag[1]
+			image_id=image_tag[0]
+			for tagname in tags.keys():
+				db.tagImage(image_id, tagname, tag_value=tags[tagname])
+	util.pipeData(images, [procFunction, tagFunction], [3, 1], 1)
+	
 class MetadataList():
 
 	#class to keep track of metadata and call functions on sets of rows from database
@@ -137,35 +199,10 @@ class MetadataList():
 
 metadata=MetadataList()
 		
-def scrapeArea(latitude, longitude, radius, tag=None):
-	#searches area then commits images found to database
-	params={'lat': latitude, 'lon': longitude, 'radius': radius}
-	ids=search.search(params) #getting ids from apis
-	ids=db.pruneIDs(ids)
-	search_function=search.compileData #function to compile metadata form search apis
-	commit_function=db.addImages		#function to commit metadata to database
-	#multithreading. see utility.pipeData()
-	util.pipeData(ids, [search_function, commit_function], [3, 1], 20)
-	
-def scrapeLocations(update_thresh=1): #update_thresh= the threshhold that determines when to update a location
-	locations=db.getLocations()
-	#Scraping for new images
-	for location in locations:
-		if(location['last_updated'] is not None and (datetime.datetime.today()-location['last_updated']).days<update_thresh):
-			break
-		print('Scraping '+str((location['latitude'], location['longitude'])))
-		scrapeArea(location['latitude'], location['longitude'], location['radius'], tag=location['region'])
-		db.updateLocation(location['id'])
 
-def showLocations():
-	import webbrowser
-	locations=db.getLocations()
-	modeldata.plotGoogleMap(circle_groups=[[(locations[i]['latitude'], locations[i]['longitude'], locations[i]['radius']*1000) for i in range(0, len(locations))]])	
-	webbrowser.open('temp.html')
-	
 def plotUserDayClusters():
 	import webbrowser
-	print('Not Implemented Correctly Yet.\nUsing "plotUserPaths"')
+	return -1
 	"""query_result=db.getUserDayOrderByTime()
 	
 	start_clusters, end_clusters=analysis.clusterUserDays(query_result)
